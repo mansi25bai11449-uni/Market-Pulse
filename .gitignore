@@ -31,6 +31,9 @@ temp_*
 scratch/
 .system_generated/
 
+# Design Scaffolding & Tool Caches
+.stitch/
+
 # OS Specific
 .DS_Store
 Thumbs.db
