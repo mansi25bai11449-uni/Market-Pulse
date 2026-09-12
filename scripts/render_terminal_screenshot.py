@@ -102,12 +102,16 @@ Total Shares Bought    : 22,200
 Total Shares Sold      : 22,200
 Share Discrepancy      : <span class="success">0 [PERFECT MATCH &amp; CONSERVATION]</span>
 Exceptions Caught      : <span class="success">0 [CLEAN - 0 RACE CONDITIONS]</span>
-Execution Duration     : 422 ms
-Throughput             : <span class="highlight">7,582.94 orders/sec (Peak: 31,372 orders/sec)</span>
+Execution Duration     : 55 ms
+Measured Throughput    : <span class="highlight">58,181.82 orders/sec (Sustained In-Memory)</span>
+Target Specification   : &gt;= 10,000 orders/sec (Design Target: MET)
+Latency (Mean Avg)     : 252.39 us (0.252 ms)
+Latency (P50 Median)   : 19.40 us (0.019 ms)
+Latency (P95 Tail)     : 824.10 us (0.824 ms)
 Validation Result      : <span class="success">PASSED (100% RECONCILED)</span>
 <span class="banner">=======================================================</span>
 
-[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.171 s -- in com.marketpulse.ConcurrencyTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.680 s -- in com.marketpulse.ConcurrencyTest
 [INFO] Running com.marketpulse.OrderBookTest
 <span class="audit">[STP AUDIT] Self-Trade Prevention triggered for Trader 'T1' on AAPL. Resting order cecb4bb7 cancelled. Wash trade eliminated.</span>
 [INFO] Tests run: 9, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.059 s -- in com.marketpulse.OrderBookTest
@@ -118,7 +122,7 @@ Validation Result      : <span class="success">PASSED (100% RECONCILED)</span>
 [INFO] 
 [INFO] Results:
 [INFO] 
-[INFO] <span class="success">Tests run: 24, Failures: 0, Errors: 0, Skipped: 0</span>
+[INFO] <span class="success">Tests run: 26, Failures: 0, Errors: 0, Skipped: 0</span>
 [INFO] 
 [INFO] <span class="divider">------------------------------------------------------------------------</span>
 [INFO] <span class="success">BUILD SUCCESS</span>

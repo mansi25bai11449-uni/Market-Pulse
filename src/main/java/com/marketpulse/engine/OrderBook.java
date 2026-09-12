@@ -23,6 +23,11 @@ public class OrderBook {
     private long totalSharesSold = 0;
     private long totalTradesCount = 0;
     private long stpEventsCount = 0;
+    private static volatile boolean verboseAuditLogging = true;
+
+    public static void setVerboseAuditLogging(boolean enabled) {
+        verboseAuditLogging = enabled;
+    }
 
     public OrderBook(String symbol) {
         this.symbol = Objects.requireNonNull(symbol, "symbol cannot be null").toUpperCase();
@@ -288,9 +293,11 @@ public class OrderBook {
         orderIndex.remove(resting.getOrderId());
         stpEventsCount++;
 
-        System.out.printf(Locale.US,
-                "[STP AUDIT] Self-Trade Prevention triggered for Trader '%s' on %s. Resting order %s (%s %d @ $%.2f) cancelled. Wash trade eliminated.%n",
-                resting.getTraderId(), this.symbol, resting.getOrderId(), resting.getSide(), resting.getRemainingQuantity(), resting.getPrice());
+        if (verboseAuditLogging) {
+            System.out.printf(Locale.US,
+                    "[STP AUDIT] Self-Trade Prevention triggered for Trader '%s' on %s. Resting order %s (%s %d @ $%.2f) cancelled. Wash trade eliminated.%n",
+                    resting.getTraderId(), this.symbol, resting.getOrderId(), resting.getSide(), resting.getRemainingQuantity(), resting.getPrice());
+        }
 
         MatchingEngine engine = MatchingEngine.getInstance();
         if (engine != null) {

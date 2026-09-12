@@ -1,5 +1,5 @@
 // MarketPulse Interactive High-Frequency Terminal Engine
-// Synchronized with Java 17 Concurrency Architecture (Institutional Wall Street Edition)
+// Synchronized with Java 24 Virtual Threads & Concurrency Architecture
 
 const STOCKS = {
   AAPL: { name: 'Apple Inc.', price: 224.50, base: 224.50, tick: 0.01 },

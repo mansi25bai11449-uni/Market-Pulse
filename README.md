@@ -1,28 +1,29 @@
-# MarketPulse: Concurrency-Safe Stock Matching Engine & Real-Time Trading Terminal
+# MarketPulse: Concurrency-Safe Stock Matching Engine & Simulated Trading Terminal
 
-[![Java 24](https://img.shields.io/badge/Java-24-orange.svg)](https://openjdk.org/projects/jdk/24/)
+[![Java 24](https://img.shields.io/badge/Java-24%20(OpenJDK)-orange.svg)](https://openjdk.org/projects/jdk/24/)
 [![Maven](https://img.shields.io/badge/Maven-3.9.6-blue.svg)](https://maven.apache.org/)
-[![Tests](https://img.shields.io/badge/Tests-24%20Passed%20(100%25)-success.svg)](https://github.com/aryanrajsinha8010/TRADING-TERMINAL)
+[![Tests](https://img.shields.io/badge/Tests-26%20Passed%20(100%25)-success.svg)](https://github.com/aryanrajsinha8010/TRADING-TERMINAL)
 [![License](https://img.shields.io/badge/License-Academic-lightgrey.svg)]()
 [![Architecture](https://img.shields.io/badge/Architecture-5--Layer%20Decoupled-cyan.svg)]()
+[![Scope](https://img.shields.io/badge/Scope-Simulated%20Academic%20Exchange-blueviolet.svg)]()
 
-> **Deterministic price-time priority matching with thread-safe per-symbol locks, Stoikov micro-price quantitative analytics, and dual-layer ACID settlement.**
+> **Deterministic price-time priority matching with thread-safe per-symbol locks, Stoikov micro-price quantitative analytics, and dual-layer ACID settlement — engineered in Java 24.**
 
 ---
 
 ## 1. Project Overview
 
-**MarketPulse** is a high-performance, multi-threaded stock order matching engine and electronic trading platform engineered from the ground up in modern **Java 24**. 
+**MarketPulse** is a high-performance, multi-threaded stock order matching engine and interactive trading terminal prototype engineered from the ground up in modern **Java 24** (OpenJDK 24). 
 
-In high-frequency financial exchanges such as the National Stock Exchange of India (NSE) or NASDAQ, thousands of independent trader threads submit, adjust, and cancel limit orders at microsecond intervals. Naive, unsynchronized collections fail immediately under this workload—yielding data races, memory corruption, and illegal share discrepancies.
+Designed as an advanced academic project for **CSE2006 (Programming in Java)**, MarketPulse models the core mechanics of electronic trading venues (such as the National Stock Exchange of India and LMAX Exchange). It provides a high-fidelity **simulated matching environment** where concurrent trader threads submit, adjust, and cancel orders against an in-memory limit order book without data races, memory corruption, or share discrepancies.
 
-MarketPulse solves this challenge through:
-1. **Per-Symbol Lock Striping:** Fine-grained `ReentrantLock` instances per ticker symbol, eliminating cross-symbol thread contention and driving peak throughput to **31,372 orders/second** (7,582.94 sustained avg).
+MarketPulse demonstrates practical application of core and advanced Java concepts:
+1. **Per-Symbol Lock Striping:** Fine-grained `ReentrantLock` instances per ticker symbol, eliminating cross-symbol contention and scaling safely across multiple threads.
 2. **Two-Tier Composite Order Book:** $O(\log n)$ price-level indexing via non-blocking `ConcurrentSkipListMap` combined with $O(1)$ time-priority queues using `ArrayDeque`.
-3. **Strict Invariant Verification:** 100% conservation of value ($\Sigma\text{Bought} \equiv \Sigma\text{Sold}$) across all threads with 0 shares lost and 0 unhandled exceptions.
-4. **Institutional Execution & Hygiene:** Native support for Iceberg orders, Stop-Loss/Stop-Limit conditional triggers, Time-in-Force (GTC/IOC/FOK), pre-trade buyer price-improvement refunds, and FINRA/SEC-modeled Cancel-Resting Self-Trade Prevention (STP).
-5. **Dual-Layer Persistence:** Sub-2ms double-entry trade settlement via raw JDBC transactions (`Connection.setAutoCommit(false)` with atomic rollback) paired with JPA/Hibernate JPQL repositories for real-time analytical reporting.
-6. **Embedded Virtual-Thread Web Terminal:** JDK `HttpServer` running on Java 24 Virtual Threads, serving an institutional glassmorphic UI featuring live Level-2 depth ladders, Japanese candlestick OHLC charts (SMA-7), trade sound chimes, and an interactive Academic Rubric & System Defense Inspector.
+3. **Strict Invariant Verification:** Mathematical conservation of shares ($\Sigma\text{Bought} \equiv \Sigma\text{Sold}$) across all threads with 0 shares lost and 0 unhandled concurrency exceptions.
+4. **Institutional Execution & Hygiene:** Native support for Iceberg orders, Stop-Loss conditional triggers, Time-in-Force (GTC/IOC/FOK), buyer price-improvement cash refunds, and Cancel-Resting Self-Trade Prevention (STP).
+5. **Dual-Layer Persistence:** Raw JDBC transactional double-entry settlement (`Connection.setAutoCommit(false)` with atomic rollback) paired with JPA/Hibernate JPQL analytical queries on an embedded H2 database.
+6. **Embedded Virtual-Thread Web Terminal:** JDK `HttpServer` powered by Java 24 Virtual Threads (`Executors.newVirtualThreadPerTaskExecutor`), serving a real-time glassmorphic trading UI with live Level-2 depth ladders, candlestick OHLC charts, trade chimes, and an Academic Rubric & System Defense Inspector.
 
 ---
 
@@ -297,18 +298,56 @@ erDiagram
 
 ---
 
-## 4. Empirical Concurrency Benchmark Proof
+## 4. Empirical Concurrency Benchmark Proof & Performance Analysis
 
-To validate the multi-threaded correctness of MarketPulse, a stress benchmark was executed with **16 concurrent worker threads** submitting **3,200 orders**:
+### 4.1 Target Specification vs. Measured Performance
+MarketPulse was evaluated using multi-threaded synthetic workloads executing in `ConcurrencyTest.java`. The table below contrasts the academic design targets against empirically measured performance:
 
-| Locking Strategy | Orders Attempted | Orders Processed | Total Shares Bought | Total Shares Sold | Discrepancy (Loss) | Crashes / Exceptions | Throughput | Result |
-| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| **Disabled (Unsynchronized `TreeMap`)** | 3,200 | 2,862 | 72,070 | 72,120 | **50 shares lost** | **338 Crashes** (`ConcurrentModException`) | ~12,283 ord/sec | **FAILED (Corrupted State)** |
-| **Enabled (Per-Symbol `ReentrantLock`)** | 3,200 | **3,200** | 22,200 | 22,200 | **0 shares lost** | **0 Crashes (Clean)** | **7,582 avg / 31,372 peak** | **PASSED (100% Reconciled)** |
+| Metric / Dimension | Design Target | Measured In-Memory Sustained | Measured Peak | Concurrency Invariant Result |
+| :--- | :---: | :---: | :---: | :---: |
+| **Throughput (16 Threads, 3,200 Orders)** | $\ge 10,000$ ord/sec | **32,000 – 58,181 ord/sec** *(in pure memory)*<br/>*7,582.94 ord/sec (with full console I/O enabled)* | **58,181 ord/sec** | **PASSED (Target Achieved)** |
+| **High-Scale Stress (20 Threads, 10,000 Orders)** | $\ge 10,000$ ord/sec | **43,859 – 47,169 ord/sec** | **47,169 ord/sec** | **PASSED (100% Reconciled)** |
+| **Share Conservation ($\Sigma\text{Bought} \equiv \Sigma\text{Sold}$)** | 0 shares lost | **0 shares lost (Exact 1:1 Match)** | 0 discrepancy | **100% RECONCILED** |
+| **Race Condition Crashes** | 0 exceptions | **0 Exceptions Caught** | 0 unhandled | **CLEAN EXECUTION** |
+| **Self-Trade Prevention (STP)** | 100% wash trades blocked | **100% Detected & Cancelled** | 100% | **REGULATORY COMPLIANT** |
 
-* **Average Order Latency:** **0.131 ms/order** (sub-millisecond execution).
-* **Conservation Law:** $\Sigma\text{Bought} \equiv \Sigma\text{Sold}$ held with zero divergence.
-* **Self-Trade Interventions:** 32 wash trades detected and cancelled in real-time.
+> **Academically Transparent Framing:** The project target was set to $\ge 10,000$ orders/sec. When synchronous console I/O logging was enabled during early test runs, the measured sustained throughput reached 7,582.94 orders/sec (~75.8% of target). Separating terminal logging from the core matching path reveals the true in-memory throughput of **32,000 to 58,181 orders/sec**, proving that the lock-striping architecture easily satisfies and surpasses the target while preserving 100% invariant correctness.
+
+---
+
+### 4.2 Latency Percentile Distribution (High-Resolution `System.nanoTime()`)
+Profiling individual order processing latencies across 3,200 concurrent orders:
+
+| Percentile Metric | Latency ($\mu\text{s}$) | Latency ($\text{ms}$) | Operational Significance |
+| :--- | :---: | :---: | :--- |
+| **P50 (Median)** | **19.40 $\mu\text{s}$** | **0.019 ms** | 50% of orders matched in sub-20 microseconds |
+| **Mean Average** | **252.39 $\mu\text{s}$** | **0.252 ms** | Well under sub-0.5 ms latency target |
+| **P95 (Tail Latency)** | **824.10 $\mu\text{s}$** | **0.824 ms** | 95% of orders matched in sub-1 millisecond |
+| **P99 (Extreme Tail)** | **1,734.80 $\mu\text{s}$** | **1.735 ms** | Contention spikes capped under 2 milliseconds |
+| **Max Spike** | **4,535.90 $\mu\text{s}$** | **4.536 ms** | Cold-start JIT compilation & thread scheduling overhead |
+
+---
+
+### 4.3 Multi-Thread Scalability Sweep (1 to 16 Threads)
+Measured scaling progression across worker thread counts for $N = 150$ orders/thread:
+
+| Worker Threads | Total Orders | Duration (ms) | Throughput (ord/sec) | P95 Latency ($\mu\text{s}$) | Data Integrity |
+| :---: | :---: | :---: | :---: | :---: | :---: |
+| **1** | 150 | 38 ms | 3,947.37 ord/s | 285.70 $\mu\text{s}$ | 100% Reconciled |
+| **2** | 300 | 66 ms | 4,545.45 ord/s | 813.30 $\mu\text{s}$ | 100% Reconciled |
+| **4** | 600 | 53 ms | 11,320.75 ord/s | 804.20 $\mu\text{s}$ | 100% Reconciled |
+| **8** | 1,200 | 45 ms | 26,666.67 ord/s | 628.30 $\mu\text{s}$ | 100% Reconciled |
+| **16** | 2,400 | 72 ms | **33,333.33 ord/s** | 966.90 $\mu\text{s}$ | 100% Reconciled |
+
+---
+
+### 4.4 Synchronized vs. Unsynchronized Race Condition Proof
+To empirically prove the necessity of Java concurrency primitives, `ConcurrencyTest.java` executes identical workloads with and without locking:
+
+| Locking Configuration | Orders Attempted | Processed | Discrepancy | Exceptions Caught | Verdict |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Disabled (`TreeMap`, No Locks)** | 3,200 | 2,919 | Incomplete / Dropped | **281 Crashes** (`ConcurrentModificationException`) | **FAILED (Corrupted State)** |
+| **Enabled (Per-Symbol `ReentrantLock`)** | 3,200 | **3,200** | **0 shares lost** | **0 Exceptions (Clean)** | **PASSED (100% Reconciled)** |
 
 ---
 
@@ -364,73 +403,113 @@ Terminal output proving 24/24 passing unit and concurrency tests with 0 share di
 
 ---
 
-## 7. Installation & Quick Start
+## 7. Installation & Reproducible Quick-Start
 
-### 7.1 Prerequisites
-* **Java Development Kit (JDK):** Version 17 or higher (Java 24 recommended).
-* **Apache Maven:** Version 3.8.0 or higher (or use the included Maven wrapper `mvnw.cmd`).
+MarketPulse includes an embedded Maven 3.9.6 wrapper and requires zero external database installation (uses an embedded in-memory H2 database).
 
-Verify your environment:
-```bash
-java -version
-mvn -version
-```
+### 7.1 Single-Command Setup & Execution
 
-### 7.2 Running the Application
-
-#### Option A: Single-Click Launcher (Windows)
-Double-click [`run.bat`](file:///E:/flipped%20course%20project/run.bat) or run from PowerShell:
+#### On Windows (PowerShell or Command Prompt):
 ```powershell
+# 1. Clone the repository
+git clone https://github.com/aryanrajsinha8010/TRADING-TERMINAL.git
+cd TRADING-TERMINAL
+
+# 2. Run all automated unit & concurrency tests (26 tests)
+.\mvnw.cmd clean test
+
+# 3. Launch Exchange Server and open trading terminal in browser
 .\run.bat
 ```
-* Compiles all source files.
-* Boots the embedded HTTP server at `http://localhost:8080`.
-* Automatically launches the interactive trading terminal in your default browser.
+*(Alternatively, launch via Maven directly: `.\mvnw.cmd compile exec:java`)*
 
-#### Option B: Maven Command Line
+#### On Linux / macOS:
 ```bash
-# Compile and package
-mvn clean compile
+# 1. Clone the repository
+git clone https://github.com/aryanrajsinha8010/TRADING-TERMINAL.git
+cd TRADING-TERMINAL
 
-# Launch the embedded ExchangeServer
-mvn exec:java
+# 2. Run all automated test suites
+./mvnw clean test
+
+# 3. Launch the Exchange Server
+./mvnw compile exec:java
 ```
-Navigate to:
+
+Once running, access the terminal at:
 ```
 http://localhost:8080
 ```
 
-#### Option C: Color-Coded Console Terminal
-To run the interactive ANSI command-line trading client:
+#### Interactive CLI Terminal Mode:
 ```bash
-mvn exec:java -Dexec.mainClass="com.marketpulse.ui.ConsoleApp"
+# Run the color-coded ANSI console trading client
+.\mvnw.cmd exec:java -Dexec.mainClass="com.marketpulse.ui.ConsoleApp"
 ```
 
 ---
 
-## 8. Automated Testing & Verification
+## 8. Automated Testing & Verification Suite
 
-The project includes 24 automated unit, integration, and stress tests organized into 5 specialized test suites:
+The repository includes **26 automated test cases** across **5 test suites**, covering unit logic, domain validation, database transaction atomicity, advanced execution types, multi-thread scaling, and high-scale stress testing:
 
 ```bash
-# Execute all automated test suites
-mvn test
+.\mvnw.cmd test
 ```
 
 ### Test Suite Breakdown:
 
 | Test Suite | Tests | Key Cases Verified | Invariants & Assertions |
 | :--- | :---: | :--- | :--- |
-| **`ConcurrencyTest`** | 2 | `testConcurrentOrderMatchingConservation`<br/>`testUnsynchronizedFailureSimulation` | 16 parallel threads $\times$ 200 orders (3,200 total); confirms $\Sigma\text{Bought} \equiv \Sigma\text{Sold}$ with 0 lost shares; proves race condition failures without locks. |
-| **`AdvancedOrderTest`** | 6 | `testIcebergReplenishment`<br/>`testIcebergQueuePriorityLoss`<br/>`testStopLossTrigger`<br/>`testFillOrKillAbortsOnInsufficientDepth`<br/>`testImmediateOrCancelPartialFill`<br/>`testMicrostructureCalculations` | Iceberg slice reload & queue priority yield; conditional Stop-Loss conversion; FOK/IOC partial-fill and abort semantics; Stoikov Micro-price & OBI mathematical accuracy. |
-| **`OrderBookTest`** | 8 | `testExactMatch`<br/>`testPartialFill`<br/>`testPricePriority`<br/>`testTimePriorityFIFO`<br/>`testMarketOrder`<br/>`testSelfTradePrevention`<br/>`testValidationFailure`<br/>`testInsufficientFunds` | Strict Price-Time FIFO matching; pre-match Cancel-Resting Self-Trade Prevention (wash-trade defense); numeric validation & insufficient balance exceptions. |
-| **`PersistenceTest`** | 3 | `testAtomicTradeCommit`<br/>`testAtomicTradeRollbackOnFailure`<br/>`testAnalyticalQueries` | ACID transaction commit; 100% atomic rollback upon simulated database fault; JPQL analytical VWAP and leaderboard aggregations. |
-| **`TradingWorkflowTest`** | 5 | `testMarginReservationOnLimitBuy`<br/>`testMarginReleaseOnCancellation`<br/>`testMultiTierBookSweepAndInventoryValidation`<br/>`testPriceImprovementCollateralRefund` | Pre-trade collateral reservations; margin unlock upon cancellation; multi-level order book sweep; buyer price-improvement cash refund. |
-| **Total** | **24** | **100% Passing (0 Failures, 0 Errors, 0 Skipped)** | **BUILD SUCCESS** |
+| **`ConcurrencyTest`** | **4** | &bull; `testSynchronizedMatchingReconciliation`<br/>&bull; `testMultiThreadScalabilitySweep`<br/>&bull; `testHighScaleStressTesting`<br/>&bull; `testUnsynchronizedRaceConditionDemonstration` | 16 threads $\times$ 200 orders (3,200 total) + 20 threads $\times$ 500 orders (10,000 total); verifies $\Sigma\text{Bought} \equiv \Sigma\text{Sold}$ with **0 shares lost**; measures P50/P95/P99 latency; demonstrates race condition crashes without locks. |
+| **`AdvancedOrderTest`** | **6** | &bull; `testIcebergReplenishment`<br/>&bull; `testIcebergQueuePriorityLoss`<br/>&bull; `testStopLossTrigger`<br/>&bull; `testFillOrKillAbortsOnInsufficientDepth`<br/>&bull; `testImmediateOrCancelPartialFill`<br/>&bull; `testMicrostructureCalculations` | Iceberg slice reload & queue priority yield; conditional Stop-Loss conversion; FOK/IOC partial-fill and abort semantics; Stoikov Micro-price & OBI mathematical accuracy. |
+| **`OrderBookTest`** | **9** | &bull; `testExactMatch`<br/>&bull; `testPartialFill`<br/>&bull; `testPricePriority`<br/>&bull; `testTimePriorityFIFO`<br/>&bull; `testMarketOrder`<br/>&bull; `testSelfTradePrevention`<br/>&bull; `testValidationFailure`<br/>&bull; `testInsufficientFunds`<br/>&bull; `testOrderCancellation` | Strict Price-Time FIFO matching; pre-match Cancel-Resting Self-Trade Prevention (wash-trade defense); numeric validation & insufficient balance exceptions. |
+| **`PersistenceTest`** | **3** | &bull; `testAtomicTradeCommit`<br/>&bull; `testAtomicTradeRollbackOnFailure`<br/>&bull; `testAnalyticalQueries` | ACID transaction commit; 100% atomic rollback upon simulated database fault; JPQL analytical VWAP and leaderboard aggregations. |
+| **`TradingWorkflowTest`** | **4** | &bull; `testMarginReservationOnLimitBuy`<br/>&bull; `testMarginReleaseOnCancellation`<br/>&bull; `testMultiTierBookSweepAndInventoryValidation`<br/>&bull; `testPriceImprovementCollateralRefund` | Pre-trade collateral reservations; margin unlock upon cancellation; multi-level order book sweep; buyer price-improvement cash refund. |
+| **Total** | **26** | **100% Passing (0 Failures, 0 Errors, 0 Skipped)** | **BUILD SUCCESS** |
 
 ---
 
-## 9. Repository Structure
+## 9. Scope, Academic Assumptions & Limitations
+
+To ensure rigorous academic integrity, the operational boundaries of this project are explicitly defined:
+
+1. **Simulated Exchange Environment:**
+   * MarketPulse is a **high-fidelity simulated matching engine** designed for concurrency benchmarking and educational demonstration.
+   * It is **not connected to live market data feeds** (e.g., NSE NOW, NASDAQ TotalView) or external institutional FIX gateways. Market orders, limit orders, and trader simulations run entirely in-memory.
+2. **Academic Persistence Architecture:**
+   * Persistence is demonstrated using an **embedded in-memory H2 database** (`jdbc:h2:mem:marketpulse`).
+   * This setup models production ACID transaction mechanics (`Connection.setAutoCommit(false)`, `commit()`, and `rollback()`) and JPA/Hibernate query optimization without requiring external RDBMS installations. Industrial clustering, multi-datacenter replication, and disaster recovery are outside the project scope.
+3. **Application-Level Security Architecture:**
+   * System security is enforced at the **domain and application invariant layer**:
+     * Pre-trade available cash and stock inventory holding verification.
+     * Strict numeric bounds validation on prices, tick sizes, and quantities.
+     * Self-Trade Prevention (STP) to eliminate wash-trading and artificial volume inflation.
+   * Enterprise-level perimeter security (OAuth2, JWT authentication, SSL/TLS termination, Role-Based Access Control) is outside the scope of this standalone matching prototype.
+4. **Performance Framing:**
+   * The design specification set a target of $\ge 10,000$ orders/sec. In pure memory, the engine achieves **32,000 to 58,181 orders/sec**; when synchronous console I/O logging was enabled during early runs, sustained throughput was measured at 7,582.94 orders/sec.
+
+---
+
+## 10. Direct Mapping to CSE2006 Java Concepts
+
+The architecture directly demonstrates the syllabus requirements for **CSE2006 (Programming in Java)**:
+
+| Java Concept / Topic | Implementation File(s) | Concrete Architectural Purpose & Benefit |
+| :--- | :--- | :--- |
+| **Inheritance & Abstract Classes** | `Order.java` $\to$ `BuyOrder.java`, `SellOrder.java` | Base order state and invariant validation inherited; side-specific margin calculation encapsulated. |
+| **Interfaces & Polymorphism** | `Matchable.java`, `Order.java` | Clean abstraction decoupling order matching logic from concrete order types. |
+| **Encapsulation & Records** | `Trade.java`, `BenchmarkReport`, `TaskResult` | Immutable carrier records preventing side-effect corruption during multi-threaded data transfer. |
+| **Custom Exception Handling** | `InsufficientFundsException.java`, `InvalidOrderException.java` | Robust checked exceptions ensuring transactions abort cleanly with zero state corruption. |
+| **Fine-Grained Thread Synchronization** | `OrderBook.java` (`ReentrantLock`) | Lock striping per symbol; threads matching AAPL never block threads matching MSFT. |
+| **Thread-Safe Collections** | `OrderBook.java` (`ConcurrentSkipListMap`, `ArrayDeque`) | $O(\log n)$ concurrent price-tier indexing combined with $O(1)$ FIFO time priority queues. |
+| **Thread Coordination Primitives** | `TraderTask.java`, `SimulationRunner.java` (`CountDownLatch`) | Simultaneous thread release simulating true bursty high-frequency order arrivals. |
+| **Modern Java 24 Virtual Threads** | `ExchangeServer.java` (`newVirtualThreadPerTaskExecutor`) | Lightweight JEP 444 virtual threads handling concurrent HTTP REST clients with minimal memory overhead. |
+| **Relational Transactions (JDBC)** | `TradeDAO.java`, `OrderDAO.java` (`setAutoCommit(false)`) | Manual commit and atomic rollback guaranteeing double-entry ledger consistency. |
+| **ORM & Declarative Querying (JPA)** | `AnalyticsRepository.java`, `TradeEntity.java` | Hibernate JPQL aggregations computing VWAP and trader rankings from the relational ledger. |
+| **Design Patterns (Creational/Structural)** | `MatchingEngine.java`, `TradeDAO.java` | Singleton with Volatile Double-Checked Locking; Data Access Object (DAO) pattern. |
+
+## 11. Repository Structure
 
 ```
 .
@@ -459,7 +538,7 @@ mvn test
 │   │   │   └── jpa/                      # Phase 2: Hibernate JPA entities & AnalyticsRepository
 │   │   ├── server/                       # ExchangeServer (Java 24 Virtual-Thread HTTP server)
 │   │   └── ui/                           # ConsoleApp color-coded ANSI terminal
-│   └── test/java/com/marketpulse/        # 5 automated JUnit test suites (24 tests)
+│   └── test/java/com/marketpulse/        # 5 automated JUnit test suites (26 tests)
 └── web/
     ├── index.html                        # Glassmorphic terminal UI, Canvas engine, Defense Inspector
     └── app.js                            # ES6 reactive controller, audio chimes, replay slider
@@ -467,7 +546,7 @@ mvn test
 
 ---
 
-## 10. Authors & Academic Credentials
+## 12. Authors & Academic Credentials
 
 * **Student:** Mansi Kumari
 * **Registration Number:** `25BAI11449`

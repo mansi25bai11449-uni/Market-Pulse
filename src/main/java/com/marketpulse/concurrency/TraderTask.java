@@ -21,7 +21,8 @@ public class TraderTask implements Callable<TraderTask.TaskResult> {
             int ordersSubmitted,
             int tradesGenerated,
             int exceptionsCaught,
-            long executionTimeMs
+            long executionTimeMs,
+            long[] latenciesNanos
     ) {}
 
     public TraderTask(String traderId, String symbol, int orderCount, double basePrice,
@@ -42,13 +43,14 @@ public class TraderTask implements Callable<TraderTask.TaskResult> {
             startGate.await();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            return new TaskResult(traderId, 0, 0, 1, 0);
+            return new TaskResult(traderId, 0, 0, 1, 0, new long[0]);
         }
 
         long start = System.currentTimeMillis();
         int submitted = 0;
         int tradesCount = 0;
         int exceptions = 0;
+        long[] latencies = new long[orderCount];
 
         for (int i = 0; i < orderCount; i++) {
             Side side = random.nextBoolean() ? Side.BUY : Side.SELL;
@@ -63,7 +65,10 @@ public class TraderTask implements Callable<TraderTask.TaskResult> {
                     : new SellOrder(traderId, symbol, type, price, qty);
 
             try {
+                long t0 = System.nanoTime();
                 var trades = engine.submitOrder(order);
+                long t1 = System.nanoTime();
+                latencies[submitted] = Math.max(1, t1 - t0);
                 tradesCount += trades.size();
                 submitted++;
             } catch (Exception e) {
@@ -72,6 +77,7 @@ public class TraderTask implements Callable<TraderTask.TaskResult> {
         }
 
         long elapsed = System.currentTimeMillis() - start;
-        return new TaskResult(traderId, submitted, tradesCount, exceptions, elapsed);
+        long[] validLatencies = java.util.Arrays.copyOf(latencies, submitted);
+        return new TaskResult(traderId, submitted, tradesCount, exceptions, elapsed, validLatencies);
     }
 }
