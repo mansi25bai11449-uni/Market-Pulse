@@ -1,0 +1,37 @@
+# Maven Build Artifacts
+target/
+*.jar
+*.war
+*.ear
+*.class
+
+# IDE and Editor Files
+.idea/
+*.iml
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.project
+.classpath
+.settings/
+
+# Database Files
+*.db
+h2-*.db
+test-db.*
+marketpulse.mv.db
+marketpulse.trace.db
+
+# Logs & Temporary Files
+*.log
+*.tmp
+temp_*
+scratch/
+.system_generated/
+
+# OS Specific
+.DS_Store
+Thumbs.db
+desktop.ini

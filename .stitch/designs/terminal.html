@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>MarketPulse - Deterministic Matching Engine &amp; L2 Terminal</title>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Chivo:ital,wght@0,400;0,600;0,700;0,800;1,700&amp;family=Geist:wght@300;400;500;600;700&amp;family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary": "#412d00",
+            "on-error-container": "#ffdad6",
+            "on-secondary": "#670020",
+            "on-primary-fixed-variant": "#005144",
+            "error": "#ffb4ab",
+            "on-error": "#690005",
+            "inverse-primary": "#006b5b",
+            "error-container": "#93000a",
+            "tertiary-fixed": "#ffdea8",
+            "primary": "#d7fff3",
+            "surface-dim": "#0f131c",
+            "surface-container-low": "#181c24",
+            "surface-bright": "#353942",
+            "surface": "#0f131c",
+            "on-primary-container": "#006c5c",
+            "surface-container-highest": "#31353e",
+            "on-tertiary-fixed": "#271900",
+            "secondary-fixed": "#ffd9dc",
+            "secondary-container": "#d4004b",
+            "on-tertiary-fixed-variant": "#5e4200",
+            "on-background": "#dfe2ee",
+            "outline-variant": "#3a4a46",
+            "tertiary-fixed-dim": "#ffba20",
+            "tertiary": "#fff5ea",
+            "on-primary": "#00382f",
+            "surface-container-lowest": "#0a0e16",
+            "secondary": "#ffb2ba",
+            "on-secondary-container": "#ffe6e8",
+            "surface-tint": "#00dfc1",
+            "on-surface-variant": "#b9cac4",
+            "inverse-on-surface": "#2c3039",
+            "outline": "#83948f",
+            "primary-fixed-dim": "#00dfc1",
+            "inverse-surface": "#dfe2ee",
+            "secondary-fixed-dim": "#ffb2ba",
+            "on-primary-fixed": "#00201a",
+            "surface-container-high": "#262a33",
+            "surface-container": "#1c2028",
+            "primary-fixed": "#26fedc",
+            "on-surface": "#dfe2ee",
+            "primary-container": "#00f5d4",
+            "on-tertiary-container": "#7d5900",
+            "on-secondary-fixed": "#400011",
+            "background": "#0f131c",
+            "on-secondary-fixed-variant": "#910030",
+            "tertiary-container": "#ffd489",
+            "surface-variant": "#31353e"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-xl": "1rem",
+            "gutter": "0.5rem",
+            "gutter-mobile": "0.25rem",
+            "margin-mobile": "0.5rem",
+            "space-lg": "0.75rem",
+            "space-xs": "0.125rem",
+            "space-md": "0.5rem",
+            "margin": "0.75rem",
+            "space-sm": "0.25rem"
+          },
+          "fontFamily": {
+            "headline-md": ["Chivo", "sans-serif"],
+            "label-lg": ["JetBrains Mono", "monospace"],
+            "body-lg": ["Geist", "sans-serif"],
+            "label-md": ["JetBrains Mono", "monospace"],
+            "headline-lg": ["Chivo", "sans-serif"],
+            "headline-xl": ["Chivo", "sans-serif"],
+            "label-sm": ["JetBrains Mono", "monospace"],
+            "headline-xl-mobile": ["Chivo", "sans-serif"],
+            "body-md": ["Geist", "sans-serif"],
+            "headline-sm": ["Chivo", "sans-serif"],
+            "body-sm": ["Geist", "sans-serif"]
+          },
+          "fontSize": {
+            "headline-md": ["18px", { "lineHeight": "24px", "fontWeight": "700" }],
+            "label-lg": ["13px", { "lineHeight": "16px", "fontWeight": "600" }],
+            "body-lg": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+            "label-md": ["11px", { "lineHeight": "14px", "fontWeight": "500" }],
+            "headline-lg": ["22px", { "lineHeight": "28px", "fontWeight": "700" }],
+            "headline-xl": ["32px", { "lineHeight": "38px", "fontWeight": "800" }],
+            "label-sm": ["9px", { "lineHeight": "12px", "fontWeight": "500" }],
+            "headline-xl-mobile": ["24px", { "lineHeight": "30px", "fontWeight": "800" }],
+            "body-md": ["13px", { "lineHeight": "18px", "fontWeight": "400" }],
+            "headline-sm": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+            "body-sm": ["11px", { "lineHeight": "16px", "fontWeight": "400" }]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-family: 'Material Symbols Outlined';
+      font-weight: normal;
+      font-style: normal;
+      font-size: 16px;
+      line-height: 1;
+      display: inline-block;
+      text-transform: none;
+      letter-spacing: normal;
+      word-wrap: normal;
+      white-space: nowrap;
+      direction: ltr;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    /* Custom scrollbar styling for high-density tables */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0a0e16;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #3a4a46;
+      border-radius: 2px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #83948f;
+    }
+  </style>
+</head>
+<body class="bg-surface-container-lowest text-on-surface antialiased overflow-x-hidden selection:bg-primary-container selection:text-on-primary">
+<!-- TopNavBar (Shared Component Execution) -->
+<header class="flex justify-between items-center w-full px-margin h-10 border-b border-outline-variant bg-surface-container-lowest fixed top-0 z-50">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary-fixed" data-icon="terminal">terminal</span>
+<span class="text-headline-md font-headline-md font-bold tracking-wider text-primary-fixed">MarketPulse</span>
+</div>
+<span class="text-outline-variant">|</span>
+<!-- Search on left -->
+<div class="relative flex items-center">
+<span class="material-symbols-outlined absolute left-space-sm text-outline text-label-sm" data-icon="search">search</span>
+<input class="bg-surface-container-low border border-outline-variant pl-6 pr-space-md py-0.5 text-label-sm font-label-sm text-on-surface focus:border-primary-fixed focus:outline-none w-44 rounded-DEFAULT" placeholder="FILTER TICKER / L2 SYMBOL..." type="text" value="AAPL (NASDAQ)"/>
+</div>
+<!-- Navigation Links -->
+<nav class="hidden md:flex items-center gap-space-lg ml-space-md text-label-md font-label-md">
+<a class="border-b-2 border-primary-fixed text-primary-fixed font-semibold pb-1 hover:bg-surface-variant transition-colors duration-75" href="#l2-book">L2 Order Book</a>
+<a class="text-on-surface-variant hover:text-on-surface pb-1 hover:bg-surface-variant transition-colors duration-75" href="#matching-engine">Matching Engine</a>
+<a class="text-on-surface-variant hover:text-on-surface pb-1 hover:bg-surface-variant transition-colors duration-75" href="#stress-benchmark">Stress Benchmark</a>
+<a class="text-on-surface-variant hover:text-on-surface pb-1 hover:bg-surface-variant transition-colors duration-75" href="#audit-trail">Audit Trail</a>
+</nav>
+</div>
+<!-- Telemetry Ticker Highlights -->
+<div class="hidden lg:flex items-center gap-space-lg text-label-sm font-label-sm bg-surface-container-low px-space-md py-1 border border-outline-variant rounded-DEFAULT">
+<div class="flex items-center gap-space-xs">
+<span class="w-1.5 h-1.5 rounded-full bg-primary-container animate-pulse"></span>
+<span class="text-on-surface-variant">ENGINE:</span>
+<span class="text-primary-fixed font-bold">01-US-EAST</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="text-on-surface-variant">RTT:</span>
+<span class="text-primary-fixed font-bold">0.12ms</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="text-on-surface-variant">THROUGHPUT:</span>
+<span class="text-tertiary-fixed-dim font-bold">4.2M OPS/SEC</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="text-on-surface-variant">DISRUPTOR:</span>
+<span class="text-primary-fixed">ZERO-COPY RING</span>
+</div>
+</div>
+<!-- Trailing Actions -->
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-xs">
+<button class="px-space-md py-0.5 bg-primary-container/10 border border-primary-container text-primary-container text-label-sm font-label-sm font-bold uppercase rounded-DEFAULT hover:bg-primary-container hover:text-on-primary transition-all duration-75">
+          Execute Buy
+        </button>
+<button class="px-space-md py-0.5 bg-secondary-container/20 border border-secondary-fixed-dim text-secondary-fixed-dim text-label-sm font-label-sm font-bold uppercase rounded-DEFAULT hover:bg-secondary-container hover:text-on-surface transition-all duration-75">
+          Execute Sell
+        </button>
+</div>
+<!-- Trailing Icon Actions -->
+<div class="flex items-center gap-space-xs border-l border-outline-variant pl-space-md">
+<button class="text-on-surface-variant hover:text-primary-fixed transition-colors" title="Sensors Telemetry">
+<span class="material-symbols-outlined" data-icon="sensors">sensors</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary-fixed transition-colors" title="Execution Speed">
+<span class="material-symbols-outlined" data-icon="speed">speed</span>
+</button>
+<button class="text-on-surface-variant hover:text-primary-fixed transition-colors" title="Interactive Terminal">
+<span class="material-symbols-outlined" data-icon="terminal">terminal</span>
+</button>
+<button class="relative text-on-surface-variant hover:text-primary-fixed transition-colors" title="System Notifications">
+<span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+<span class="absolute top-0 right-0 w-1.5 h-1.5 bg-tertiary-fixed-dim rounded-full"></span>
+</button>
+</div>
+<!-- Trader Desk Avatar -->
+<div class="flex items-center gap-space-sm pl-space-sm">
+<img class="w-6 h-6 rounded-full border border-primary-fixed/50 object-cover" data-alt="Cyberpunk high-frequency algorithmic trader identity badge avatar displaying biometric HUD telemetry on obsidian dark glass with cyan terminal reflections and sharp edge highlights" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqhKlFZ9rdZDWMQK1tAHoPtLnP0vTX1kVHSd0CZBkabRq78ae4YAr99ttPhDUqICmiq0pu2vaRRVxwpQ5uq7laSNZovn5Pn1O-CmuoHzWZ_umU1eljGGdYXf2-iETOysgbkVw1uf0bVQnL6iTV0X8g56TI8Ls7JgQS3kWwc0Y3SaTeY2EID0f_RYWRBFcfke7r1e2YAW77yZP0fO8JMVUA9FCoKcjov1RsmYMRou2Kt3v9adB7k-wrDugsPDVzx600a29TroDN3Avs"/>
+<div class="hidden xl:flex flex-col text-left">
+<span class="text-label-sm font-label-sm font-bold text-on-surface leading-none">Trader #1 (Alice)</span>
+<span class="text-label-sm font-label-sm text-primary-fixed leading-none">$50,000.00 USD</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Live Multi-Equity Tape Banner -->
+<div class="fixed top-10 left-0 right-0 h-6 bg-surface-container-low border-b border-outline-variant z-40 flex items-center px-margin overflow-x-auto gap-space-xl text-label-sm font-label-sm scrollbar-none">
+<div class="flex items-center gap-space-sm font-bold text-primary-fixed flex-shrink-0">
+<span class="material-symbols-outlined text-[13px]" data-icon="candlestick_chart">candlestick_chart</span>
+<span>DMA TAPE:</span>
+</div>
+<div class="flex items-center gap-space-md flex-shrink-0">
+<span class="font-bold text-on-surface">AAPL</span>
+<span class="text-primary-fixed font-bold">$182.40</span>
+<span class="text-primary-fixed">+1.24%</span>
+<span class="text-outline text-[10px]">VOL: 38.2M</span>
+<svg class="w-10 h-3 stroke-primary-fixed fill-none" viewbox="0 0 40 12">
+<polyline points="0,10 8,8 16,9 24,4 32,5 40,1" stroke-linecap="round" stroke-width="1.2"></polyline>
+</svg>
+</div>
+<div class="flex items-center gap-space-md flex-shrink-0">
+<span class="font-bold text-on-surface">NVDA</span>
+<span class="text-primary-fixed font-bold">$492.15</span>
+<span class="text-primary-fixed">+3.82%</span>
+<span class="text-outline text-[10px]">VOL: 62.4M</span>
+<svg class="w-10 h-3 stroke-primary-fixed fill-none" viewbox="0 0 40 12">
+<polyline points="0,11 10,7 18,8 28,3 35,4 40,0" stroke-linecap="round" stroke-width="1.2"></polyline>
+</svg>
+</div>
+<div class="flex items-center gap-space-md flex-shrink-0">
+<span class="font-bold text-on-surface">TSLA</span>
+<span class="text-secondary-fixed-dim font-bold">$248.50</span>
+<span class="text-secondary-fixed-dim">-0.92%</span>
+<span class="text-outline text-[10px]">VOL: 44.1M</span>
+<svg class="w-10 h-3 stroke-secondary-fixed-dim fill-none" viewbox="0 0 40 12">
+<polyline points="0,2 10,4 18,3 26,8 34,7 40,11" stroke-linecap="round" stroke-width="1.2"></polyline>
+</svg>
+</div>
+<div class="flex items-center gap-space-md flex-shrink-0">
+<span class="font-bold text-on-surface">MSFT</span>
+<span class="text-primary-fixed font-bold">$374.90</span>
+<span class="text-primary-fixed">+0.48%</span>
+<span class="text-outline text-[10px]">VOL: 21.0M</span>
+<svg class="w-10 h-3 stroke-primary-fixed fill-none" viewbox="0 0 40 12">
+<polyline points="0,8 10,7 20,4 30,5 40,2" stroke-linecap="round" stroke-width="1.2"></polyline>
+</svg>
+</div>
+<div class="flex items-center gap-space-md flex-shrink-0 text-tertiary-fixed-dim">
+<span class="material-symbols-outlined text-[12px]" data-icon="bolt">bolt</span>
+<span>RING BUFFER FILL: 14.2%</span>
+<span class="text-outline">|</span>
+<span>LOCK-FREE COMMITS: ACTIVE</span>
+</div>
+</div>
+<!-- App Structure: SideNavBar + Main Content Canvas -->
+<div class="flex pt-16 pb-7 w-full min-h-screen">
+<!-- SideNavBar (Shared Component Execution) -->
+<aside class="flex flex-col justify-between w-48 h-[calc(100vh-5.75rem)] border-r border-outline-variant p-space-xs bg-surface-container-low fixed left-0 top-16 z-30 select-none">
+<div class="flex flex-col gap-space-xs">
+<!-- Header Node Matrix -->
+<div class="p-space-sm bg-surface-container-lowest border border-outline-variant rounded-DEFAULT mb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="w-2 h-2 rounded-full bg-primary-container animate-ping"></span>
+<span class="text-label-sm font-label-sm font-bold text-primary">ENGINE://01-US-EAST</span>
+</div>
+<p class="text-label-sm font-label-sm text-outline mt-0.5">RTT: 0.18ms | 100Gbps</p>
+</div>
+<!-- Tab Items -->
+<a class="flex items-center gap-space-sm border-l-2 border-primary-fixed text-primary-fixed bg-surface-container-high font-bold px-space-md py-space-sm text-label-sm font-label-sm rounded-r-DEFAULT" href="#engine">
+<span class="material-symbols-outlined" data-icon="monitoring">monitoring</span>
+<span>Engine Terminal</span>
+</a>
+<a class="flex items-center gap-space-sm text-on-surface-variant hover:text-on-surface px-space-md py-space-sm text-label-sm font-label-sm hover:bg-surface-container-highest transition-colors duration-75" href="#order-books">
+<span class="material-symbols-outlined" data-icon="candlestick_chart">candlestick_chart</span>
+<span>Order Books</span>
+</a>
+<a class="flex items-center gap-space-sm text-on-surface-variant hover:text-on-surface px-space-md py-space-sm text-label-sm font-label-sm hover:bg-surface-container-highest transition-colors duration-75" href="#thread-stress">
+<span class="material-symbols-outlined" data-icon="memory">memory</span>
+<span>Thread Stress</span>
+</a>
+<a class="flex items-center gap-space-sm text-on-surface-variant hover:text-on-surface px-space-md py-space-sm text-label-sm font-label-sm hover:bg-surface-container-highest transition-colors duration-75" href="#replay-bench">
+<span class="material-symbols-outlined" data-icon="replay">replay</span>
+<span>Replay Bench</span>
+</a>
+<a class="flex items-center gap-space-sm text-on-surface-variant hover:text-on-surface px-space-md py-space-sm text-label-sm font-label-sm hover:bg-surface-container-highest transition-colors duration-75" href="#audit-logs">
+<span class="material-symbols-outlined" data-icon="receipt_long">receipt_long</span>
+<span>Audit Logs</span>
+</a>
+<!-- Emergency Halt Action Button -->
+<div class="mt-space-md px-space-xs">
+<button class="w-full py-1.5 px-space-sm bg-secondary-container/20 border border-secondary-container text-secondary-fixed text-label-sm font-label-sm font-bold uppercase rounded-DEFAULT hover:bg-secondary-container hover:text-on-secondary-container flex items-center justify-center gap-space-xs transition-all">
+<span class="material-symbols-outlined text-[13px]" data-icon="dangerous">dangerous</span>
+<span>Emergency Halt</span>
+</button>
+</div>
+</div>
+<!-- Footer Sub-Tabs -->
+<div class="flex flex-col gap-space-xs border-t border-outline-variant pt-space-xs">
+<a class="flex items-center gap-space-sm text-on-surface-variant hover:text-on-surface px-space-md py-space-sm text-label-sm font-label-sm hover:bg-surface-container-highest transition-colors duration-75" href="#network">
+<span class="material-symbols-outlined" data-icon="lan">lan</span>
+<span>Network Latency</span>
+</a>
+<a class="flex items-center gap-space-sm text-on-surface-variant hover:text-on-surface px-space-md py-space-sm text-label-sm font-label-sm hover:bg-surface-container-highest transition-colors duration-75" href="#diagnostics">
+<span class="material-symbols-outlined" data-icon="tune">tune</span>
+<span>System Diagnostics</span>
+</a>
+</div>
+</aside>
+<!-- Main Command Center Canvas (pl-48 to compensate docked SideNavBar) -->
+<main class="pl-48 w-full min-h-[calc(100vh-5.75rem)] p-space-md bg-surface-container-lowest grid grid-cols-12 gap-gutter">
+<!-- COLUMN 1: DMA Order Entry & Trader Portfolio (Width: 3/12 cols) -->
+<section class="col-span-12 lg:col-span-3 flex flex-col gap-gutter">
+<!-- DMA Fast Order Entry Panel -->
+<div class="bg-surface-container-low/80 backdrop-blur-md border border-outline-variant rounded-DEFAULT p-space-md flex flex-col shadow-inner">
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="w-2 h-2 bg-primary-container rounded-sm"></span>
+<h2 class="text-headline-sm font-headline-sm uppercase text-on-surface">DMA Order Entry</h2>
+</div>
+<span class="text-label-sm font-label-sm text-outline uppercase">ROUTE: NASDAQ-ITCH</span>
+</div>
+<!-- BUY / SELL Tab Switcher -->
+<div class="grid grid-cols-2 gap-space-xs p-space-xs bg-surface-container-lowest border border-outline-variant rounded-DEFAULT mb-space-md">
+<button class="py-1 text-label-md font-label-md font-bold uppercase rounded-DEFAULT bg-primary-container/15 border border-primary-container text-primary-fixed flex items-center justify-center gap-space-xs" id="buy-toggle">
+<span class="material-symbols-outlined text-[13px]" data-icon="arrow_upward">arrow_upward</span>
+<span>BUY (BID)</span>
+</button>
+<button class="py-1 text-label-md font-label-md font-semibold uppercase rounded-DEFAULT text-on-surface-variant hover:text-secondary-fixed hover:bg-surface-container-high transition-colors flex items-center justify-center gap-space-xs" id="sell-toggle">
+<span class="material-symbols-outlined text-[13px]" data-icon="arrow_downward">arrow_downward</span>
+<span>SELL (ASK)</span>
+</button>
+</div>
+<!-- Order Type Selectors -->
+<div class="flex items-center gap-space-xs mb-space-md text-label-sm font-label-sm">
+<button class="px-space-sm py-1 bg-surface-container-highest border border-primary-container text-primary-fixed rounded-DEFAULT">Limit</button>
+<button class="px-space-sm py-1 bg-surface-container border border-outline-variant text-on-surface-variant hover:text-on-surface rounded-DEFAULT">Market</button>
+<button class="px-space-sm py-1 bg-surface-container border border-outline-variant text-on-surface-variant hover:text-on-surface rounded-DEFAULT">Stop-Limit</button>
+<button class="px-space-sm py-1 bg-surface-container border border-outline-variant text-on-surface-variant hover:text-on-surface rounded-DEFAULT">IOC</button>
+</div>
+<!-- Input Controls -->
+<div class="space-y-space-sm text-label-sm font-label-sm">
+<div>
+<div class="flex justify-between text-outline mb-0.5">
+<span>LIMIT PRICE ($)</span>
+<span class="text-primary-fixed">MID: $182.375</span>
+</div>
+<div class="relative flex items-center">
+<input class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface font-label-md px-space-sm py-1 text-right focus:border-primary-fixed focus:outline-none rounded-DEFAULT" type="text" value="182.40"/>
+<span class="absolute left-2 text-outline">$</span>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-outline mb-0.5">
+<span>SHARE QUANTITY</span>
+<span class="text-on-surface-variant">AVAIL: 274 SHS</span>
+</div>
+<div class="relative flex items-center">
+<input class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface font-label-md px-space-sm py-1 text-right focus:border-primary-fixed focus:outline-none rounded-DEFAULT" type="number" value="100"/>
+<span class="absolute left-2 text-outline">QTY</span>
+</div>
+</div>
+<!-- Quick-select chips -->
+<div class="grid grid-cols-4 gap-space-xs pt-1">
+<button class="py-0.5 bg-surface-container border border-outline-variant text-outline hover:text-primary-fixed hover:border-primary-fixed text-label-sm font-label-sm rounded-DEFAULT">25%</button>
+<button class="py-0.5 bg-surface-container border border-outline-variant text-outline hover:text-primary-fixed hover:border-primary-fixed text-label-sm font-label-sm rounded-DEFAULT">50%</button>
+<button class="py-0.5 bg-surface-container border border-outline-variant text-outline hover:text-primary-fixed hover:border-primary-fixed text-label-sm font-label-sm rounded-DEFAULT">75%</button>
+<button class="py-0.5 bg-surface-container border border-outline-variant text-primary-fixed font-bold text-label-sm font-label-sm rounded-DEFAULT">100%</button>
+</div>
+<!-- Dynamic Slider -->
+<div class="pt-space-xs">
+<input class="w-full accent-primary-container bg-surface-container-highest h-1 rounded-DEFAULT cursor-pointer" max="274" min="1" type="range" value="100"/>
+</div>
+<!-- Fee & Route Telemetry -->
+<div class="p-space-sm bg-surface-container-lowest border border-outline-variant rounded-DEFAULT space-y-1 text-label-sm font-label-sm">
+<div class="flex justify-between">
+<span class="text-outline">Est. Total Notional:</span>
+<span class="font-bold text-on-surface">$18,240.00</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline">Taker Rebate / Fee:</span>
+<span class="text-primary-fixed">-$0.18 (Mkr Rebate)</span>
+</div>
+<div class="flex justify-between">
+<span class="text-outline">DMA Pipe Route:</span>
+<span class="text-tertiary-fixed-dim font-bold">FPGA-Bypass (42ns)</span>
+</div>
+</div>
+<!-- High Impact Execute Button -->
+<button class="w-full py-2.5 bg-primary-container border border-primary-container text-on-primary font-label-md font-bold uppercase rounded-DEFAULT tracking-wider hover:shadow-[0_0_20px_rgba(0,245,212,0.45)] hover:scale-[0.99] active:scale-95 transition-all duration-75 flex items-center justify-center gap-space-sm">
+<span class="material-symbols-outlined" data-icon="flash_on">flash_on</span>
+<span>PLACE BUY ORDER (100 SHS)</span>
+</button>
+</div>
+</div>
+<!-- Trader Portfolio & Open Positions Widget -->
+<div class="bg-surface-container-low/80 backdrop-blur-md border border-outline-variant rounded-DEFAULT p-space-md flex-1 flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant mb-space-sm">
+<h2 class="text-headline-sm font-headline-sm uppercase text-on-surface">Trader Portfolio</h2>
+<span class="text-label-sm font-label-sm text-primary-fixed bg-primary-container/10 px-1 border border-primary-container/30">AUDITED</span>
+</div>
+<!-- Balances -->
+<div class="grid grid-cols-2 gap-space-sm mb-space-md text-label-sm font-label-sm">
+<div class="p-space-xs bg-surface-container-lowest border border-outline-variant rounded-DEFAULT">
+<span class="text-outline block text-[9px]">CASH BALANCE</span>
+<span class="text-body-md font-label-md font-bold text-on-surface">$50,000.00</span>
+</div>
+<div class="p-space-xs bg-surface-container-lowest border border-outline-variant rounded-DEFAULT">
+<span class="text-outline block text-[9px]">BUYING POWER</span>
+<span class="text-body-md font-label-md font-bold text-primary-fixed">$200,000.00</span>
+</div>
+</div>
+<!-- Position Holdings -->
+<div class="space-y-space-xs text-label-sm font-label-sm">
+<div class="text-[10px] text-outline uppercase font-semibold">Active Holdings</div>
+<div class="p-space-xs bg-surface-container-lowest border border-outline-variant rounded-DEFAULT flex items-center justify-between">
+<div>
+<span class="font-bold text-on-surface">AAPL</span>
+<span class="text-outline text-[10px] ml-1">200 SHS @ $181.10</span>
+</div>
+<div class="text-right">
+<span class="text-primary-fixed font-bold">+$260.00</span>
+<span class="text-[9px] text-primary-fixed ml-1">(+0.72%)</span>
+</div>
+</div>
+<div class="p-space-xs bg-surface-container-lowest border border-outline-variant rounded-DEFAULT flex items-center justify-between">
+<div>
+<span class="font-bold text-on-surface">NVDA</span>
+<span class="text-outline text-[10px] ml-1">50 SHS @ $487.30</span>
+</div>
+<div class="text-right">
+<span class="text-primary-fixed font-bold">+$242.50</span>
+<span class="text-[9px] text-primary-fixed ml-1">(+0.99%)</span>
+</div>
+</div>
+</div>
+<!-- Pending Orders -->
+<div class="mt-space-md">
+<div class="text-[10px] text-outline uppercase font-semibold mb-1">Pending Working Orders (1)</div>
+<div class="p-space-xs bg-surface-container-lowest border border-outline-variant rounded-DEFAULT flex items-center justify-between text-label-sm font-label-sm">
+<div class="flex items-center gap-space-xs">
+<span class="text-primary-fixed font-bold">BUY</span>
+<span>100 AAPL</span>
+<span class="text-outline">@ $182.25</span>
+</div>
+<button class="text-secondary-fixed-dim hover:underline text-[10px]">CANCEL</button>
+</div>
+</div>
+</div>
+<div class="pt-space-md border-t border-outline-variant mt-space-sm flex items-center justify-between text-label-sm font-label-sm text-outline">
+<span>Net Unrealized P&amp;L:</span>
+<span class="text-primary-fixed font-bold text-body-md">+$502.50 (+1.00%)</span>
+</div>
+</div>
+</section>
+<!-- COLUMN 2: Central Live L2 Order Book Ladder & Cumulative Depth (Width: 5/12 cols) -->
+<section class="col-span-12 lg:col-span-5 flex flex-col gap-gutter" id="l2-book">
+<div class="bg-surface-container-low/80 backdrop-blur-md border border-outline-variant rounded-DEFAULT p-space-md flex-1 flex flex-col">
+<!-- Ladder Header -->
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant">
+<div class="flex items-center gap-space-sm">
+<span class="material-symbols-outlined text-primary-fixed" data-icon="candlestick_chart">candlestick_chart</span>
+<h2 class="text-headline-sm font-headline-sm uppercase text-on-surface">L2 Limit Order Book (AAPL)</h2>
+</div>
+<div class="flex items-center gap-space-sm text-label-sm font-label-sm">
+<span class="text-outline">PRECISION: 0.01</span>
+<span class="px-1.5 py-0.5 bg-surface-container-highest border border-outline-variant rounded-DEFAULT text-primary-fixed">DEPTH: 20 LADDER</span>
+</div>
+</div>
+<!-- L2 Table Header -->
+<div class="grid grid-cols-3 py-1 text-label-sm font-label-sm text-outline uppercase border-b border-outline-variant/60 text-right">
+<div class="text-left">Price (USD)</div>
+<div>Size (Shares)</div>
+<div>Cumulative Depth</div>
+</div>
+<!-- ASKS (Sell Orders) Ladder (Red / Secondary) -->
+<div class="flex flex-col-reverse divide-y divide-y-reverse divide-outline-variant/20 font-label-sm text-label-sm">
+<!-- Ask 5 -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center hover:bg-surface-container-highest/50">
+<div class="absolute right-0 top-0 bottom-0 bg-secondary-container/15 w-[85%] -z-0 pointer-events-none"></div>
+<span class="text-left text-secondary-fixed font-bold z-10 pl-1">$182.45</span>
+<span class="text-on-surface z-10">4,200</span>
+<span class="text-outline z-10 pr-1">14,850</span>
+</div>
+<!-- Ask 4 -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center hover:bg-surface-container-highest/50">
+<div class="absolute right-0 top-0 bottom-0 bg-secondary-container/15 w-[68%] -z-0 pointer-events-none"></div>
+<span class="text-left text-secondary-fixed font-bold z-10 pl-1">$182.44</span>
+<span class="text-on-surface z-10">3,100</span>
+<span class="text-outline z-10 pr-1">10,650</span>
+</div>
+<!-- Ask 3 -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center hover:bg-surface-container-highest/50">
+<div class="absolute right-0 top-0 bottom-0 bg-secondary-container/15 w-[52%] -z-0 pointer-events-none"></div>
+<span class="text-left text-secondary-fixed font-bold z-10 pl-1">$182.43</span>
+<span class="text-on-surface z-10">2,850</span>
+<span class="text-outline z-10 pr-1">7,550</span>
+</div>
+<!-- Ask 2 -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center hover:bg-surface-container-highest/50">
+<div class="absolute right-0 top-0 bottom-0 bg-secondary-container/15 w-[36%] -z-0 pointer-events-none"></div>
+<span class="text-left text-secondary-fixed font-bold z-10 pl-1">$182.42</span>
+<span class="text-on-surface z-10">1,900</span>
+<span class="text-outline z-10 pr-1">4,700</span>
+</div>
+<!-- Ask 1 (Best Ask) -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center bg-secondary-container/10 border-l-2 border-secondary-fixed">
+<div class="absolute right-0 top-0 bottom-0 bg-secondary-container/25 w-[20%] -z-0 pointer-events-none"></div>
+<span class="text-left text-secondary-fixed font-bold z-10 pl-1">$182.40</span>
+<span class="text-on-surface font-bold z-10">2,800</span>
+<span class="text-outline z-10 pr-1">2,800</span>
+</div>
+</div>
+<!-- Mid-Market Spread Anchor Bar -->
+<div class="my-space-xs py-1.5 px-space-md bg-surface-container-lowest border-y border-outline-variant flex items-center justify-between text-label-sm font-label-sm">
+<div class="flex items-center gap-space-sm">
+<span class="text-outline uppercase">SPREAD:</span>
+<span class="text-tertiary-fixed-dim font-bold font-label-md">$0.05 (0.027%)</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="text-on-surface-variant">MID PRICE:</span>
+<span class="text-primary-fixed font-bold font-label-md tracking-wider">$182.375</span>
+</div>
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-[13px] text-primary-fixed" data-icon="sync">sync</span>
+<span class="text-primary-fixed font-semibold">58% BUY BIAS</span>
+</div>
+</div>
+<!-- BIDS (Buy Orders) Ladder (Teal / Primary) -->
+<div class="flex flex-col divide-y divide-outline-variant/20 font-label-sm text-label-sm">
+<!-- Bid 1 (Best Bid) -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center bg-primary-container/10 border-l-2 border-primary-fixed">
+<div class="absolute left-0 top-0 bottom-0 bg-primary-container/25 w-[24%] -z-0 pointer-events-none"></div>
+<span class="text-left text-primary-fixed font-bold z-10 pl-1">$182.35</span>
+<span class="text-on-surface font-bold z-10">3,450</span>
+<span class="text-outline z-10 pr-1">3,450</span>
+</div>
+<!-- Bid 2 -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center hover:bg-surface-container-highest/50">
+<div class="absolute left-0 top-0 bottom-0 bg-primary-container/15 w-[42%] -z-0 pointer-events-none"></div>
+<span class="text-left text-primary-fixed font-bold z-10 pl-1">$182.34</span>
+<span class="text-on-surface z-10">2,600</span>
+<span class="text-outline z-10 pr-1">6,050</span>
+</div>
+<!-- Bid 3 -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center hover:bg-surface-container-highest/50">
+<div class="absolute left-0 top-0 bottom-0 bg-primary-container/15 w-[61%] -z-0 pointer-events-none"></div>
+<span class="text-left text-primary-fixed font-bold z-10 pl-1">$182.33</span>
+<span class="text-on-surface z-10">3,900</span>
+<span class="text-outline z-10 pr-1">9,950</span>
+</div>
+<!-- Bid 4 -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center hover:bg-surface-container-highest/50">
+<div class="absolute left-0 top-0 bottom-0 bg-primary-container/15 w-[79%] -z-0 pointer-events-none"></div>
+<span class="text-left text-primary-fixed font-bold z-10 pl-1">$182.32</span>
+<span class="text-on-surface z-10">4,100</span>
+<span class="text-outline z-10 pr-1">14,050</span>
+</div>
+<!-- Bid 5 -->
+<div class="relative grid grid-cols-3 py-0.5 text-right items-center hover:bg-surface-container-highest/50">
+<div class="absolute left-0 top-0 bottom-0 bg-primary-container/15 w-[92%] -z-0 pointer-events-none"></div>
+<span class="text-left text-primary-fixed font-bold z-10 pl-1">$182.30</span>
+<span class="text-on-surface z-10">5,200</span>
+<span class="text-outline z-10 pr-1">19,250</span>
+</div>
+</div>
+<!-- Dynamic Cumulative Market Depth Visualizer (SVG Supply-Demand Curve) -->
+<div class="mt-space-md pt-space-sm border-t border-outline-variant flex flex-col flex-1">
+<div class="flex justify-between items-center text-label-sm font-label-sm text-outline mb-1">
+<span class="uppercase">Cumulative Market Depth Supply/Demand</span>
+<span class="text-primary-fixed">BIDS 19.2K vs ASKS 14.8K</span>
+</div>
+<div class="relative w-full h-28 bg-surface-container-lowest border border-outline-variant rounded-DEFAULT overflow-hidden">
+<svg class="w-full h-full" preserveaspectratio="none" viewbox="0 0 400 100">
+<defs>
+<lineargradient id="bidGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#00f5d4" stop-opacity="0.35"></stop>
+<stop offset="100%" stop-color="#00f5d4" stop-opacity="0.0"></stop>
+</lineargradient>
+<lineargradient id="askGradient" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#d4004b" stop-opacity="0.35"></stop>
+<stop offset="100%" stop-color="#d4004b" stop-opacity="0.0"></stop>
+</lineargradient>
+</defs>
+<!-- Grid baseline lines -->
+<line stroke="#3a4a46" stroke-dasharray="2 2" stroke-width="0.5" x1="0" x2="400" y1="25" y2="25"></line>
+<line stroke="#3a4a46" stroke-dasharray="2 2" stroke-width="0.5" x1="0" x2="400" y1="50" y2="50"></line>
+<line stroke="#3a4a46" stroke-dasharray="2 2" stroke-width="0.5" x1="0" x2="400" y1="75" y2="75"></line>
+<line stroke="#ffba20" stroke-width="1" x1="200" x2="200" y1="0" y2="100"></line>
+<!-- Cumulative Bid Curve (Left to Center) -->
+<polygon fill="url(#bidGradient)" points="0,100 0,15 50,30 100,55 150,75 195,92 195,100"></polygon>
+<polyline fill="none" points="0,15 50,30 100,55 150,75 195,92" stroke="#00f5d4" stroke-width="2"></polyline>
+<!-- Cumulative Ask Curve (Center to Right) -->
+<polygon fill="url(#askGradient)" points="205,100 205,92 250,78 300,58 350,38 400,20 400,100"></polygon>
+<polyline fill="none" points="205,92 250,78 300,58 350,38 400,20" stroke="#ffb2ba" stroke-width="2"></polyline>
+</svg>
+<!-- Spread Marker Center Overlay -->
+<div class="absolute top-1 left-1/2 -translate-x-1/2 bg-surface-container-high/90 border border-outline-variant px-1.5 py-0.5 rounded-DEFAULT text-[9px] font-label-sm text-tertiary-fixed-dim">
+                SPREAD: 5¢
+              </div>
+</div>
+</div>
+</div>
+</section>
+<!-- COLUMN 3: Concurrency Stress Benchmark & Reconciliation Bench (Width: 4/12 cols) -->
+<section class="col-span-12 lg:col-span-4 flex flex-col gap-gutter" id="stress-benchmark">
+<!-- Stress Test Controls & Metrics -->
+<div class="bg-surface-container-low/80 backdrop-blur-md border border-outline-variant rounded-DEFAULT p-space-md">
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant mb-space-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary-fixed-dim" data-icon="memory">memory</span>
+<h2 class="text-headline-sm font-headline-sm uppercase text-on-surface">Thread Stress Benchmark</h2>
+</div>
+<span class="text-label-sm font-label-sm px-1.5 py-0.5 bg-surface-container-highest border border-outline-variant text-tertiary-fixed-dim rounded-DEFAULT">RINGBUFFER V3</span>
+</div>
+<!-- Controls Parameter Form -->
+<div class="space-y-space-sm text-label-sm font-label-sm">
+<div>
+<div class="flex justify-between text-outline mb-0.5">
+<span>CONCURRENT WORKER THREADS</span>
+<span class="text-primary-fixed font-bold">24 THREADS (MAX 50)</span>
+</div>
+<input class="w-full accent-primary-container bg-surface-container-highest h-1 rounded-DEFAULT cursor-pointer" max="50" min="2" type="range" value="24"/>
+</div>
+<div>
+<div class="flex justify-between text-outline mb-0.5">
+<span>BATCH ORDER LOAD</span>
+<span class="text-on-surface font-bold">2,500 ORDERS</span>
+</div>
+<div class="grid grid-cols-3 gap-space-xs">
+<button class="py-1 bg-surface-container border border-outline-variant text-outline hover:text-on-surface rounded-DEFAULT">1,000</button>
+<button class="py-1 bg-surface-container border border-primary-container text-primary-fixed font-bold rounded-DEFAULT">2,500</button>
+<button class="py-1 bg-surface-container border border-outline-variant text-outline hover:text-on-surface rounded-DEFAULT">10,000</button>
+</div>
+</div>
+<div>
+<span class="text-outline block mb-0.5">CONCURRENCY SYNCHRONIZATION MODEL</span>
+<select class="w-full bg-surface-container-lowest border border-outline-variant text-on-surface py-1 px-2 rounded-DEFAULT text-label-sm font-label-sm focus:border-primary-fixed focus:outline-none">
+<option selected="">LMAX Disruptor RingBuffer (Lock-Free)</option>
+<option>Lock-Free CAS Queue (Deterministic Matching)</option>
+<option>Per-Symbol ReentrantLock (Striped Mutex)</option>
+</select>
+</div>
+<!-- Benchmark Run Trigger -->
+<button class="w-full py-2 bg-tertiary-container/20 border border-tertiary-fixed-dim text-tertiary-fixed font-label-md font-bold uppercase rounded-DEFAULT tracking-wider hover:bg-tertiary-fixed-dim hover:text-on-tertiary-fixed transition-all flex items-center justify-center gap-space-xs">
+<span class="material-symbols-outlined text-[15px]" data-icon="play_arrow">play_arrow</span>
+<span>EXECUTE CONCURRENCY BENCHMARK</span>
+</button>
+<!-- Benchmark Telemetry Readouts -->
+<div class="grid grid-cols-3 gap-space-xs p-space-xs bg-surface-container-lowest border border-outline-variant rounded-DEFAULT text-center">
+<div>
+<span class="text-[9px] text-outline uppercase block">Wall Runtime</span>
+<span class="text-label-md font-label-md font-bold text-primary-fixed">142ms</span>
+</div>
+<div>
+<span class="text-[9px] text-outline uppercase block">P99 Contention</span>
+<span class="text-label-md font-label-md font-bold text-primary-fixed">4.8 µs</span>
+</div>
+<div>
+<span class="text-[9px] text-outline uppercase block">Deadlocks</span>
+<span class="text-label-md font-label-md font-bold text-on-surface">0 DETECTED</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Strict Reconciliation Audit Card -->
+<div class="bg-surface-container-low/80 backdrop-blur-md border border-outline-variant rounded-DEFAULT p-space-md">
+<div class="flex items-center justify-between pb-space-sm border-b border-outline-variant mb-space-sm">
+<h2 class="text-headline-sm font-headline-sm uppercase text-on-surface">Deterministic Reconciliation</h2>
+<span class="px-1.5 py-0.5 bg-primary-container/20 border border-primary-container text-primary-fixed text-label-sm font-label-sm font-bold rounded-DEFAULT">100.00% AUDIT MATCH</span>
+</div>
+<div class="grid grid-cols-2 gap-space-sm text-label-sm font-label-sm mb-space-sm">
+<div class="p-space-xs bg-surface-container-lowest border border-outline-variant rounded-DEFAULT">
+<span class="text-outline text-[9px] uppercase block">Total Matched Buy Shares</span>
+<span class="text-body-md font-label-md font-bold text-on-surface">1,420,500 SHS</span>
+</div>
+<div class="p-space-xs bg-surface-container-lowest border border-outline-variant rounded-DEFAULT">
+<span class="text-outline text-[9px] uppercase block">Total Matched Sell Shares</span>
+<span class="text-body-md font-label-md font-bold text-on-surface">1,420,500 SHS</span>
+</div>
+</div>
+<div class="p-space-xs bg-primary-container/10 border border-primary-container/40 rounded-DEFAULT flex items-center justify-between text-label-sm font-label-sm">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary-fixed text-[15px]" data-icon="verified">verified</span>
+<span class="text-primary-fixed font-bold">ZERO SHARES LOST IN HIGH-CONTENTION RUN</span>
+</div>
+<span class="text-outline text-[10px]">DELTA: 0 SHS</span>
+</div>
+</div>
+<!-- Live Executed Trades Tape Stream -->
+<div class="bg-surface-container-low/80 backdrop-blur-md border border-outline-variant rounded-DEFAULT p-space-md flex-1 flex flex-col" id="audit-trail">
+<div class="flex items-center justify-between pb-space-xs border-b border-outline-variant mb-space-xs">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-primary-fixed" data-icon="receipt_long">receipt_long</span>
+<h2 class="text-headline-sm font-headline-sm uppercase text-on-surface">Live Executed Trades</h2>
+</div>
+<span class="text-outline text-label-sm font-label-sm">FEED: DETERMINISTIC</span>
+</div>
+<!-- Trade Stream Records -->
+<div class="flex-1 overflow-y-auto max-h-48 space-y-1 text-label-sm font-label-sm pr-1">
+<div class="p-1 bg-surface-container-lowest border border-outline-variant/60 rounded-DEFAULT flex items-center justify-between hover:border-primary-fixed/40">
+<div class="flex items-center gap-space-xs">
+<span class="text-outline text-[10px]">14:02:41.018</span>
+<span class="font-bold text-primary-fixed">AAPL</span>
+<span class="text-on-surface">100 @ $182.40</span>
+</div>
+<div class="flex items-center gap-space-xs text-[10px]">
+<span class="text-outline">Alice ↔ MM_DESK_4</span>
+<span class="text-primary-fixed px-1 bg-primary-container/10 border border-primary-container/30 rounded-DEFAULT">SETTLED</span>
+</div>
+</div>
+<div class="p-1 bg-surface-container-lowest border border-outline-variant/60 rounded-DEFAULT flex items-center justify-between hover:border-primary-fixed/40">
+<div class="flex items-center gap-space-xs">
+<span class="text-outline text-[10px]">14:02:40.994</span>
+<span class="font-bold text-primary-fixed">AAPL</span>
+<span class="text-on-surface">500 @ $182.40</span>
+</div>
+<div class="flex items-center gap-space-xs text-[10px]">
+<span class="text-outline">HFT_NODE_9 ↔ CITADEL</span>
+<span class="text-primary-fixed px-1 bg-primary-container/10 border border-primary-container/30 rounded-DEFAULT">SETTLED</span>
+</div>
+</div>
+<div class="p-1 bg-surface-container-lowest border border-outline-variant/60 rounded-DEFAULT flex items-center justify-between hover:border-primary-fixed/40">
+<div class="flex items-center gap-space-xs">
+<span class="text-outline text-[10px]">14:02:40.850</span>
+<span class="font-bold text-secondary-fixed">NVDA</span>
+<span class="text-on-surface">50 @ $492.10</span>
+</div>
+<div class="flex items-center gap-space-xs text-[10px]">
+<span class="text-outline">JANE_PRO ↔ ARB_BOT</span>
+<span class="text-primary-fixed px-1 bg-primary-container/10 border border-primary-container/30 rounded-DEFAULT">SETTLED</span>
+</div>
+</div>
+<div class="p-1 bg-surface-container-lowest border border-outline-variant/60 rounded-DEFAULT flex items-center justify-between hover:border-primary-fixed/40">
+<div class="flex items-center gap-space-xs">
+<span class="text-outline text-[10px]">14:02:40.712</span>
+<span class="font-bold text-primary-fixed">TSLA</span>
+<span class="text-on-surface">250 @ $248.55</span>
+</div>
+<div class="flex items-center gap-space-xs text-[10px]">
+<span class="text-outline">FLOW_DESK ↔ Alice</span>
+<span class="text-primary-fixed px-1 bg-primary-container/10 border border-primary-container/30 rounded-DEFAULT">SETTLED</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+<!-- Persistent Engine Event Replay Controls Drawer (Bottom Docked Sub-Bar) -->
+<div class="fixed bottom-7 left-48 right-0 h-8 bg-surface-container-low border-t border-outline-variant z-40 flex items-center justify-between px-margin text-label-sm font-label-sm">
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="material-symbols-outlined text-tertiary-fixed-dim text-[16px]" data-icon="replay">replay</span>
+<span class="font-bold text-on-surface uppercase">Event Scrub Replay:</span>
+</div>
+<!-- Replay Controls -->
+<div class="flex items-center gap-1">
+<button class="p-1 bg-surface-container-highest border border-outline-variant rounded-DEFAULT hover:text-primary-fixed" title="Play/Pause">
+<span class="material-symbols-outlined text-[13px]" data-icon="play_arrow">play_arrow</span>
+</button>
+<button class="p-1 bg-surface-container-highest border border-outline-variant rounded-DEFAULT hover:text-primary-fixed" title="Step 1 Event">
+<span class="material-symbols-outlined text-[13px]" data-icon="skip_next">skip_next</span>
+</button>
+</div>
+<!-- Scrub Progress Bar -->
+<div class="flex items-center gap-space-sm w-72">
+<span class="text-outline text-[10px]">SEQ: 1,429</span>
+<div class="relative w-full h-1.5 bg-surface-container-lowest border border-outline-variant rounded-DEFAULT overflow-hidden">
+<div class="w-[28.5%] h-full bg-tertiary-fixed-dim"></div>
+</div>
+<span class="text-outline text-[10px]">5,000</span>
+</div>
+<!-- Replay Speed Chips -->
+<div class="flex items-center gap-1">
+<button class="px-1.5 py-0.5 bg-surface-container-highest border border-tertiary-fixed-dim text-tertiary-fixed-dim rounded-DEFAULT font-bold text-[10px]">1x</button>
+<button class="px-1.5 py-0.5 bg-surface-container border border-outline-variant text-outline rounded-DEFAULT text-[10px] hover:text-on-surface">5x</button>
+<button class="px-1.5 py-0.5 bg-surface-container border border-outline-variant text-outline rounded-DEFAULT text-[10px] hover:text-on-surface">10x</button>
+</div>
+</div>
+<!-- Engine Lock Status Indicator -->
+<div class="flex items-center gap-space-md">
+<div class="flex items-center gap-space-xs">
+<span class="w-1.5 h-1.5 bg-primary-container rounded-full"></span>
+<span class="text-outline">REPLAY ENGINE BUFFER:</span>
+<span class="text-primary-fixed font-bold">SYNCHRONIZED</span>
+</div>
+<span class="text-outline">|</span>
+<span class="text-on-surface-variant">MEM_ALLOC: 412MB / 4096MB</span>
+</div>
+</div>
+<!-- Footer (Shared Component Execution) -->
+<footer class="flex justify-between items-center w-full px-margin h-7 border-t border-outline-variant bg-surface-container-lowest fixed bottom-0 left-0 right-0 z-50 text-label-sm font-label-sm">
+<div class="flex items-center gap-space-sm">
+<span class="text-label-sm font-label-sm font-bold text-primary-fixed">MARKETPULSE ENGINE v4.8.2-PROD | DETERMINISTIC MATCHING PROTOCOL | STRICT ORDER AUDIT ACTIVE</span>
+</div>
+<div class="flex items-center gap-space-lg">
+<a class="text-outline hover:text-on-surface transition-colors duration-75" href="#metrics">Engine Metrics</a>
+<a class="text-outline hover:text-on-surface transition-colors duration-75" href="#snapshot">L2 Snapshot</a>
+<a class="text-outline hover:text-on-surface transition-colors duration-75" href="#queue-api">Lock-Free Queue API</a>
+<a class="text-primary-fixed font-semibold" href="#status">Status: Synchronized</a>
+</div>
+</footer>
+<!-- Micro-Interactions Script -->
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Toggle DMA Order Tab state between BUY and SELL
+      const buyToggle = document.getElementById('buy-toggle');
+      const sellToggle = document.getElementById('sell-toggle');
+
+      if (buyToggle && sellToggle) {
+        buyToggle.addEventListener('click', () => {
+          buyToggle.className = 'py-1 text-label-md font-label-md font-bold uppercase rounded-DEFAULT bg-primary-container/15 border border-primary-container text-primary-fixed flex items-center justify-center gap-space-xs';
+          sellToggle.className = 'py-1 text-label-md font-label-md font-semibold uppercase rounded-DEFAULT text-on-surface-variant hover:text-secondary-fixed hover:bg-surface-container-high transition-colors flex items-center justify-center gap-space-xs';
+        });
+
+        sellToggle.addEventListener('click', () => {
+          sellToggle.className = 'py-1 text-label-md font-label-md font-bold uppercase rounded-DEFAULT bg-secondary-container/20 border border-secondary-fixed-dim text-secondary-fixed-dim flex items-center justify-center gap-space-xs';
+          buyToggle.className = 'py-1 text-label-md font-label-md font-semibold uppercase rounded-DEFAULT text-on-surface-variant hover:text-primary-fixed hover:bg-surface-container-high transition-colors flex items-center justify-center gap-space-xs';
+        });
+      }
+    });
+  </script>
+</body></html>
