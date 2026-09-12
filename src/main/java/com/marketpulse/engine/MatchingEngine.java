@@ -2,8 +2,11 @@ package com.marketpulse.engine;
 
 import com.marketpulse.exceptions.InsufficientFundsException;
 import com.marketpulse.exceptions.InvalidOrderException;
+import com.marketpulse.exceptions.SettlementException;
 import com.marketpulse.model.*;
+import com.marketpulse.persistence.jdbc.TradeDAO;
 
+import java.sql.SQLException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -15,20 +18,30 @@ import java.util.function.Consumer;
  * stop order condition monitoring, and per-symbol order book coordination.
  */
 public class MatchingEngine {
+    public enum SettlementMode {
+        IN_MEMORY_FAST,
+        SYNCHRONOUS_JDBC_ACID
+    }
+
     private static volatile MatchingEngine instance;
 
     private final ConcurrentHashMap<String, OrderBook> orderBooks;
     private final ConcurrentHashMap<String, Trader> traders;
     private final ConcurrentHashMap<String, Stock> stocks;
     private final ConcurrentHashMap<String, Order> activeOrders;
+    private final ConcurrentHashMap<String, Order> orderHistory;
     private final ConcurrentHashMap<String, List<Order>> pendingStopOrders;
     private final List<Consumer<Trade>> tradeListeners;
+
+    private volatile SettlementMode settlementMode = SettlementMode.IN_MEMORY_FAST;
+    private TradeDAO tradeDAO;
 
     private MatchingEngine() {
         this.orderBooks = new ConcurrentHashMap<>();
         this.traders = new ConcurrentHashMap<>();
         this.stocks = new ConcurrentHashMap<>();
         this.activeOrders = new ConcurrentHashMap<>();
+        this.orderHistory = new ConcurrentHashMap<>();
         this.pendingStopOrders = new ConcurrentHashMap<>();
         this.tradeListeners = new CopyOnWriteArrayList<>();
     }
@@ -42,6 +55,31 @@ public class MatchingEngine {
             }
         }
         return instance;
+    }
+
+    public void enableSynchronousPersistence(TradeDAO tradeDAO) {
+        this.tradeDAO = tradeDAO;
+        this.settlementMode = SettlementMode.SYNCHRONOUS_JDBC_ACID;
+    }
+
+    public void disableSynchronousPersistence() {
+        this.settlementMode = SettlementMode.IN_MEMORY_FAST;
+    }
+
+    public SettlementMode getSettlementMode() {
+        return this.settlementMode;
+    }
+
+    public TradeDAO getTradeDAO() {
+        return this.tradeDAO;
+    }
+
+    public Order getOrder(String orderId) {
+        Order o = activeOrders.get(orderId);
+        if (o == null) {
+            o = orderHistory.get(orderId);
+        }
+        return o;
     }
 
     public static void resetInstance() {
@@ -107,6 +145,7 @@ public class MatchingEngine {
 
     private List<Trade> executeOrderInternal(Order order) {
         activeOrders.put(order.getOrderId(), order);
+        orderHistory.put(order.getOrderId(), order);
         OrderBook book = getOrCreateBook(order.getSymbol());
         List<Trade> trades = book.submit(order);
 
@@ -286,6 +325,18 @@ public class MatchingEngine {
     }
 
     private void settleTrade(Trade trade) {
+        // Direct Synchronous JDBC ACID settlement if enabled
+        if (settlementMode == SettlementMode.SYNCHRONOUS_JDBC_ACID && tradeDAO != null) {
+            Order buyOrder = getOrder(trade.getBuyOrderId());
+            Order sellOrder = getOrder(trade.getSellOrderId());
+            try {
+                tradeDAO.recordTradeAtomic(trade, buyOrder, sellOrder);
+            } catch (SQLException e) {
+                // JDBC atomic transaction rolled back; abort in-memory mutation to maintain 100% parity
+                throw new SettlementException("Synchronous JDBC ACID settlement failed for trade " + trade.getTradeId() + ": " + e.getMessage(), e);
+            }
+        }
+
         Trader buyer = traders.get(trade.getBuyerId());
         Trader seller = traders.get(trade.getSellerId());
 

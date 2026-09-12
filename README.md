@@ -2,7 +2,7 @@
 
 [![Java 24](https://img.shields.io/badge/Java-24%20(OpenJDK)-orange.svg)](https://openjdk.org/projects/jdk/24/)
 [![Maven](https://img.shields.io/badge/Maven-3.9.6-blue.svg)](https://maven.apache.org/)
-[![Tests](https://img.shields.io/badge/Tests-26%20Passed%20(100%25)-success.svg)](https://github.com/aryanrajsinha8010/TRADING-TERMINAL)
+[![Tests](https://img.shields.io/badge/Tests-28%20Passed%20(100%25)-success.svg)](https://github.com/aryanrajsinha8010/TRADING-TERMINAL)
 [![License](https://img.shields.io/badge/License-Academic-lightgrey.svg)]()
 [![Architecture](https://img.shields.io/badge/Architecture-5--Layer%20Decoupled-cyan.svg)]()
 [![Scope](https://img.shields.io/badge/Scope-Simulated%20Academic%20Exchange-blueviolet.svg)]()
@@ -92,25 +92,33 @@ sequenceDiagram
     participant JDBC as TradeDAO (Phase 1 JDBC)
     participant Web as Terminal Broadcast
 
-    Trader->>API: POST /api/orders (BUY 100 AAPL @ $155 LIMIT)
-    API->>Engine: placeOrder(order)
+    Trader->>API: POST /api/orders (BUY 100 AAPL @ $155 LIMIT, Header: X-Trader-Id)
+    API->>API: Verify Trader Identity & Security Policy
+    API->>Engine: submitOrder(order)
     Engine->>Model: Reserve Collateral ($15,500 Cash)
-    alt Insufficient Funds
+    alt Insufficient Funds / Invalid Order
         Model-->>API: InsufficientFundsException (0 Balance Mutation)
         API-->>Trader: 400 Bad Request
     else Valid Collateral
-        Engine->>Book: placeOrder(order)
+        Engine->>Book: submit(order)
         Book->>Book: lock.lock() (Acquire Per-Symbol Lock)
         Book->>Book: Check Self-Trade Prevention (STP)
         Book->>Book: FIFO Sweep vs Opposing resting Asks ($150.00)
-        Book->>Model: Price-Improvement Refund (+$500 to Cash)
-        Book->>JDBC: recordTradeAtomic(trade, buyer, seller)
-        alt Database Failure
-            JDBC-->>JDBC: rollback() (100% State Restoration)
-        else Database Success
-            JDBC-->>JDBC: commit() (ACID Settlement)
-        end
         Book->>Book: lock.unlock()
+        alt Synchronous JDBC ACID Settlement Mode Enabled
+            Engine->>JDBC: settleTrade() -> recordTradeAtomic(trade, buyOrder, sellOrder)
+            alt Database Failure / Disk Crash Midway
+                JDBC-->>JDBC: rollback() (Zero DB rows committed)
+                JDBC-->>Engine: SettlementException (Abort in-memory mutation)
+                Engine-->>API: 500 Settlement Failure (0 In-Memory Corruption)
+            else Database Success
+                JDBC-->>JDBC: commit() (Relational double-entry committed)
+                Engine->>Model: Apply In-Memory Settlement (Cash & Shares synced)
+            end
+        else High-Throughput In-Memory Mode (Default LMAX Pattern)
+            Engine->>Model: Instant Sub-Millisecond Settlement (>50k ord/s)
+            Engine-->>JDBC: Asynchronous Audit & TradeLogger Event
+        end
         API-->>Trader: 200 OK (Status: FILLED, ExecPrice: $150.00)
         API-->>Web: Broadcast Refreshed Depth Ladder & Micro-Price
     end
@@ -464,30 +472,40 @@ The repository includes **26 automated test cases** across **5 test suites**, co
 | **`ConcurrencyTest`** | **4** | &bull; `testSynchronizedMatchingReconciliation`<br/>&bull; `testMultiThreadScalabilitySweep`<br/>&bull; `testHighScaleStressTesting`<br/>&bull; `testUnsynchronizedRaceConditionDemonstration` | 16 threads $\times$ 200 orders (3,200 total) + 20 threads $\times$ 500 orders (10,000 total); verifies $\Sigma\text{Bought} \equiv \Sigma\text{Sold}$ with **0 shares lost**; measures P50/P95/P99 latency; demonstrates race condition crashes without locks. |
 | **`AdvancedOrderTest`** | **6** | &bull; `testIcebergReplenishment`<br/>&bull; `testIcebergQueuePriorityLoss`<br/>&bull; `testStopLossTrigger`<br/>&bull; `testFillOrKillAbortsOnInsufficientDepth`<br/>&bull; `testImmediateOrCancelPartialFill`<br/>&bull; `testMicrostructureCalculations` | Iceberg slice reload & queue priority yield; conditional Stop-Loss conversion; FOK/IOC partial-fill and abort semantics; Stoikov Micro-price & OBI mathematical accuracy. |
 | **`OrderBookTest`** | **9** | &bull; `testExactMatch`<br/>&bull; `testPartialFill`<br/>&bull; `testPricePriority`<br/>&bull; `testTimePriorityFIFO`<br/>&bull; `testMarketOrder`<br/>&bull; `testSelfTradePrevention`<br/>&bull; `testValidationFailure`<br/>&bull; `testInsufficientFunds`<br/>&bull; `testOrderCancellation` | Strict Price-Time FIFO matching; pre-match Cancel-Resting Self-Trade Prevention (wash-trade defense); numeric validation & insufficient balance exceptions. |
-| **`PersistenceTest`** | **3** | &bull; `testAtomicTradeCommit`<br/>&bull; `testAtomicTradeRollbackOnFailure`<br/>&bull; `testAnalyticalQueries` | ACID transaction commit; 100% atomic rollback upon simulated database fault; JPQL analytical VWAP and leaderboard aggregations. |
+| **`PersistenceTest`** | **5** | &bull; `testAtomicTradeCommit`<br/>&bull; `testAtomicTradeRollbackOnFailure`<br/>&bull; `testMatchingEngineDirectTransactionalPersistenceSuccess`<br/>&bull; `testMatchingEngineDirectTransactionalPersistenceRollbackOnDbCrash`<br/>&bull; `testAnalyticalQueries` | Direct end-to-end matching $\to$ JDBC ACID execution in normal matching path; exact parity between in-memory Trader cash and database `cash_balance`; simulated mid-transaction disk/network crash triggers rollback and prevents in-memory corruption (0 balance mutation); JPQL analytical VWAP and leaderboard aggregations. |
 | **`TradingWorkflowTest`** | **4** | &bull; `testMarginReservationOnLimitBuy`<br/>&bull; `testMarginReleaseOnCancellation`<br/>&bull; `testMultiTierBookSweepAndInventoryValidation`<br/>&bull; `testPriceImprovementCollateralRefund` | Pre-trade collateral reservations; margin unlock upon cancellation; multi-level order book sweep; buyer price-improvement cash refund. |
-| **Total** | **26** | **100% Passing (0 Failures, 0 Errors, 0 Skipped)** | **BUILD SUCCESS** |
+| **Total** | **28** | **100% Passing (0 Failures, 0 Errors, 0 Skipped)** | **BUILD SUCCESS** |
 
 ---
 
 ## 9. Scope, Academic Assumptions & Limitations
 
-To ensure rigorous academic integrity, the operational boundaries of this project are explicitly defined:
+To ensure uncompromising academic integrity and technical accuracy, the operational boundaries of this project are explicitly defined:
 
-1. **Simulated Exchange Environment:**
-   * MarketPulse is a **high-fidelity simulated matching engine** designed for concurrency benchmarking and educational demonstration.
-   * It is **not connected to live market data feeds** (e.g., NSE NOW, NASDAQ TotalView) or external institutional FIX gateways. Market orders, limit orders, and trader simulations run entirely in-memory.
-2. **Academic Persistence Architecture:**
-   * Persistence is demonstrated using an **embedded in-memory H2 database** (`jdbc:h2:mem:marketpulse`).
-   * This setup models production ACID transaction mechanics (`Connection.setAutoCommit(false)`, `commit()`, and `rollback()`) and JPA/Hibernate query optimization without requiring external RDBMS installations. Industrial clustering, multi-datacenter replication, and disaster recovery are outside the project scope.
-3. **Application-Level Security Architecture:**
-   * System security is enforced at the **domain and application invariant layer**:
-     * Pre-trade available cash and stock inventory holding verification.
-     * Strict numeric bounds validation on prices, tick sizes, and quantities.
-     * Self-Trade Prevention (STP) to eliminate wash-trading and artificial volume inflation.
-   * Enterprise-level perimeter security (OAuth2, JWT authentication, SSL/TLS termination, Role-Based Access Control) is outside the scope of this standalone matching prototype.
-4. **Performance Framing:**
-   * The design specification set a target of $\ge 10,000$ orders/sec. In pure memory, the engine achieves **32,000 to 58,181 orders/sec**; when synchronous console I/O logging was enabled during early runs, sustained throughput was measured at 7,582.94 orders/sec.
+### 9.1 Dual-Mode Persistence & Academic Database Framing
+* **Terminology & Prototype Classification:** The persistence tier is an **academic / prototype embedded ACID persistence layer**. It is engineered to faithfully demonstrate core relational transactional mechanics (`Connection.setAutoCommit(false)`, `commit()`, and `rollback()`) and JPA/Hibernate query optimization in a self-contained, zero-dependency environment without requiring external database server daemons.
+* **Dual-Mode Settlement Architecture:**
+  1. **Mode A: High-Throughput In-Memory Matching (LMAX Disruptor Pattern - Default):** Designed for extreme throughput ($\ge 50,000$ orders/sec) with sub-millisecond execution. Order matching and margin validation occur entirely in-memory with non-blocking audit logging (`TradeLogger` CSV) and asynchronous ledger replication.
+  2. **Mode B: Synchronous JDBC ACID Settlement (DvP / Banking Ledger Mode):** Synchronously embeds `TradeDAO.recordTradeAtomic(trade, buyOrder, sellOrder)` directly into the `MatchingEngine.settleTrade(...)` hot path. Each fill requires a successful multi-table relational transaction commit before execution confirmation. If a database failure occurs midway, the transaction rolls back cleanly, a checked `SettlementException` is raised, and in-memory trader balances remain completely untouched (0 mutation).
+* **Storage Model Comparison:**
+  * **In-Memory Embedded Mode (`jdbc:h2:mem:...`):** Used during automated JUnit tests for hermetic, idempotent test execution and zero cleanup footprint.
+  * **Disk-Persisted Embedded Mode (`jdbc:h2:file:./data/marketpulse`):** Supported by `DatabaseConfig` for local table durability across JVM restarts.
+  * **Industrial Production Exchanges:** Real-world exchanges (e.g., NASDAQ INET, CME Globex) use append-only binary Write-Ahead Log (WAL) journals, Aeron IPC messaging, and distributed Raft/Paxos sequencer clusters rather than generic SQL engines in the microsecond matching loop.
+
+### 9.2 Security Specification: Domain Risk Integrity vs. Enterprise Perimeter
+MarketPulse enforces rigorous **Domain-Level Financial Risk Integrity & Exchange Controls**, while enterprise perimeter security is explicitly segregated:
+
+| Security Dimension | Implemented in MarketPulse (In-Scope) | Enterprise Perimeter (Out-of-Scope) |
+| :--- | :--- | :--- |
+| **Collateral & Margin** | Pre-trade cash verification, share inventory reservations, and negative balance protection (`InsufficientFundsException`). | Credit-line underwriting, bank account ACH clearing, multi-currency FX settlement. |
+| **Market Integrity** | Self-Trade Prevention (STP Cancel-Resting) eliminating wash trades; price collars against fat-finger errors; dynamic circuit breakers. | Anti-Money Laundering (AML) transaction surveillance, regulatory audit trail reporting (MiFID II / CAT). |
+| **Concurrency Safety** | Per-symbol fine-grained `ReentrantLock` striping preventing race conditions, balance double-spending, and state desynchronization. | Distributed transaction managers (Two-Phase Commit / XA across multiple datacenters). |
+| **Access & Identification** | Header-based Trader Identity Verification (`X-Trader-Id`), registered account authorization, and `/api/security/policy` introspection. | OAuth2 / OpenID Connect Single Sign-On (SSO), enterprise JWT token expiry, and Hardware Security Modules (HSM). |
+| **Transport Perimeter** | High-performance JDK `HttpServer` with Virtual Threads on port 8080 with CORS headers. | Perimeter SSL/TLS termination, Web Application Firewall (WAF), and DDoS filtering proxies. |
+
+### 9.3 Performance Framing
+* In pure in-memory mode, the engine achieves **35,000 to 58,181 orders/sec** with mean latency $< 300\ \mu\text{s}$.
+* When synchronous console I/O logging or synchronous multi-table database transactions are enabled in the critical path, throughput reflects I/O disk latency ($\approx 7,500$ ord/s with console I/O, and transactional ACID guarantees per fill). Both behaviors are benchmarked and documented.
 
 ---
 

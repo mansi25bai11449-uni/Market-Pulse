@@ -15,13 +15,19 @@ public class TraderDAO {
         this.dbConfig = dbConfig;
     }
 
-    public void saveTrader(Trader trader) throws SQLException {
+    public void saveTrader(Connection conn, Trader trader) throws SQLException {
         String sql = "MERGE INTO traders (trader_id, name, cash_balance) KEY(trader_id) VALUES (?, ?, ?)";
-        try (Connection conn = dbConfig.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, trader.getTraderId());
             ps.setString(2, trader.getName());
             ps.setDouble(3, trader.getCashBalance());
             ps.executeUpdate();
+        }
+    }
+
+    public void saveTrader(Trader trader) throws SQLException {
+        try (Connection conn = dbConfig.getConnection()) {
+            saveTrader(conn, trader);
         }
     }
 

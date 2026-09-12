@@ -15,12 +15,12 @@ public class OrderDAO {
         this.dbConfig = dbConfig;
     }
 
-    public void saveOrder(Order order) throws SQLException {
+    public void saveOrder(Connection conn, Order order) throws SQLException {
         String sql = """
             MERGE INTO orders (order_id, trader_id, symbol, side, order_type, price, quantity, remaining_qty, status, created_at)
             KEY(order_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """;
-        try (Connection conn = dbConfig.getConnection(); PreparedStatement ps = conn.prepareStatement(sql)) {
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, order.getOrderId());
             ps.setString(2, order.getTraderId());
             ps.setString(3, order.getSymbol());
@@ -32,6 +32,12 @@ public class OrderDAO {
             ps.setString(9, order.getStatus().name());
             ps.setTimestamp(10, Timestamp.from(order.getCreatedAt()));
             ps.executeUpdate();
+        }
+    }
+
+    public void saveOrder(Order order) throws SQLException {
+        try (Connection conn = dbConfig.getConnection()) {
+            saveOrder(conn, order);
         }
     }
 

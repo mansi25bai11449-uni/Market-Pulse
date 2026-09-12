@@ -19,11 +19,21 @@ public class TradeDAO {
         this.orderDAO = new OrderDAO(dbConfig);
     }
 
+    private volatile boolean simulateFailureMidway = false;
+
+    public void setSimulateFailureMidway(boolean simulateFailureMidway) {
+        this.simulateFailureMidway = simulateFailureMidway;
+    }
+
+    public boolean isSimulateFailureMidway() {
+        return this.simulateFailureMidway;
+    }
+
     /**
      * Atomically records a trade execution, updates both orders, and adjusts cash balances
      * of both counterparties within a single explicit JDBC database transaction.
      */
-    public void recordTradeAtomic(Trade trade, Order buyOrder, Order sellOrder, boolean simulateFailureMidway) throws SQLException {
+    public void recordTradeAtomic(Trade trade, Order buyOrder, Order sellOrder, boolean forceSimulateFailure) throws SQLException {
         String insertTradeSql = """
             INSERT INTO trades (trade_id, buy_order_id, sell_order_id, symbol, price, quantity, executed_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -34,6 +44,14 @@ public class TradeDAO {
 
         try {
             conn.setAutoCommit(false);
+
+            // 0. Ensure buy and sell orders exist in DB to satisfy foreign key constraints
+            if (buyOrder != null) {
+                orderDAO.saveOrder(conn, buyOrder);
+            }
+            if (sellOrder != null) {
+                orderDAO.saveOrder(conn, sellOrder);
+            }
 
             // 1. Insert trade record
             try (PreparedStatement ps = conn.prepareStatement(insertTradeSql)) {
@@ -51,7 +69,7 @@ public class TradeDAO {
             traderDAO.updateBalance(conn, trade.getBuyerId(), -trade.getTotalAmount());
 
             // Deliberate simulated crash between balance transfers to verify rollback behavior
-            if (simulateFailureMidway) {
+            if (forceSimulateFailure || this.simulateFailureMidway) {
                 throw new SQLException("SIMULATED_FAILURE_MIDWAY: Network crash or database disk error");
             }
 

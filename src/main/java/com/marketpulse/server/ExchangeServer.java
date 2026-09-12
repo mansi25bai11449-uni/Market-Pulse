@@ -3,6 +3,10 @@ package com.marketpulse.server;
 import com.marketpulse.engine.MatchingEngine;
 import com.marketpulse.engine.OrderBook;
 import com.marketpulse.model.*;
+import com.marketpulse.persistence.DatabaseConfig;
+import com.marketpulse.persistence.jdbc.OrderDAO;
+import com.marketpulse.persistence.jdbc.TradeDAO;
+import com.marketpulse.persistence.jdbc.TraderDAO;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
@@ -30,12 +34,20 @@ public class ExchangeServer {
     private final MatchingEngine engine;
     private final List<Trade> tradeHistory;
     private final Path webRoot;
+    private final DatabaseConfig dbConfig;
+    private final TradeDAO tradeDAO;
+    private final TraderDAO traderDAO;
+    private final OrderDAO orderDAO;
 
     public ExchangeServer(int port, Path webRoot) {
         this.port = port;
         this.webRoot = webRoot;
         this.engine = MatchingEngine.getInstance();
         this.tradeHistory = new CopyOnWriteArrayList<>();
+        this.dbConfig = DatabaseConfig.getInstance();
+        this.tradeDAO = new TradeDAO(this.dbConfig);
+        this.traderDAO = new TraderDAO(this.dbConfig);
+        this.orderDAO = new OrderDAO(this.dbConfig);
 
         // Capture all generated trades
         this.engine.addTradeListener(this.tradeHistory::add);
@@ -155,6 +167,8 @@ public class ExchangeServer {
         server.createContext("/api/trades", new TradesHandler());
         server.createContext("/api/microstructure", new MicrostructureHandler());
         server.createContext("/api/traders", new TradersHandler());
+        server.createContext("/api/persistence/mode", new PersistenceModeHandler());
+        server.createContext("/api/security/policy", new SecurityPolicyHandler());
         server.createContext("/api/health", exchange -> sendJsonResponse(exchange, 200, "{\"status\":\"UP\",\"engine\":\"MarketPulse\"}"));
 
         // Static Web Terminal Handler
@@ -225,6 +239,16 @@ public class ExchangeServer {
 
                 try {
                     String traderId = params.getOrDefault("traderId", "TRADER_MANSI");
+                    String authHeader = exchange.getRequestHeaders().getFirst("X-Trader-Id");
+                    if (authHeader != null && !authHeader.isBlank()) {
+                        traderId = authHeader;
+                    }
+                    Trader trader = engine.getTrader(traderId);
+                    if (trader == null) {
+                        sendJsonResponse(exchange, 401, "{\"success\":false,\"error\":\"Authentication failed: Unregistered trader account '" + escapeJson(traderId) + "'. Trader verification failed.\"}");
+                        return;
+                    }
+
                     String symbol = params.getOrDefault("symbol", "AAPL").toUpperCase();
                     Side side = Side.valueOf(params.getOrDefault("side", "BUY").toUpperCase());
                     OrderType orderType = OrderType.valueOf(params.getOrDefault("orderType", "LIMIT").toUpperCase());
@@ -477,10 +501,85 @@ public class ExchangeServer {
         }
     }
 
+    private class PersistenceModeHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            addCorsHeaders(exchange);
+            String method = exchange.getRequestMethod();
+
+            if ("OPTIONS".equalsIgnoreCase(method)) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
+            if ("POST".equalsIgnoreCase(method)) {
+                String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+                Map<String, String> params = parseJsonOrForm(body);
+                String requested = params.getOrDefault("mode", "").toUpperCase();
+                if ("SYNCHRONOUS_JDBC_ACID".equals(requested) || "ACID".equals(requested) || "TRUE".equals(requested)) {
+                    engine.enableSynchronousPersistence(tradeDAO);
+                } else if ("IN_MEMORY_FAST".equals(requested) || "FAST".equals(requested) || "FALSE".equals(requested)) {
+                    engine.disableSynchronousPersistence();
+                } else {
+                    if (engine.getSettlementMode() == MatchingEngine.SettlementMode.SYNCHRONOUS_JDBC_ACID) {
+                        engine.disableSynchronousPersistence();
+                    } else {
+                        engine.enableSynchronousPersistence(tradeDAO);
+                    }
+                }
+            }
+
+            MatchingEngine.SettlementMode currentMode = engine.getSettlementMode();
+            boolean isAcid = (currentMode == MatchingEngine.SettlementMode.SYNCHRONOUS_JDBC_ACID);
+            String json = String.format(Locale.US,
+                    "{\"settlementMode\":\"%s\",\"activeSynchronous\":%b,\"database\":\"H2 Embedded (PostgreSQL Mode)\",\"prototypeScoping\":\"academic/prototype ACID persistence\",\"pipeline\":\"%s\"}",
+                    currentMode.name(),
+                    isAcid,
+                    isAcid
+                            ? "Matching Engine -> settleTrade() -> TradeDAO.recordTradeAtomic() -> COMMIT (Rollback on failure)"
+                            : "Matching Engine -> In-Memory Execution -> Asynchronous Audit Logging (LMAX Disruptor Pattern)"
+            );
+            sendJsonResponse(exchange, 200, json);
+        }
+    }
+
+    private class SecurityPolicyHandler implements HttpHandler {
+        @Override
+        public void handle(HttpExchange exchange) throws IOException {
+            addCorsHeaders(exchange);
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                exchange.sendResponseHeaders(204, -1);
+                return;
+            }
+
+            String json = """
+                {
+                  "securityArchitecture": "Domain-Level Financial Risk Integrity & Exchange Controls",
+                  "prototypeClassification": "Academic Exchange Prototype",
+                  "implementedControls": [
+                    "Pre-trade Collateral Verification & Negative Balance Prevention",
+                    "Self-Trade Prevention (STP / Wash Trading Elimination)",
+                    "Price Collar & Dynamic Volatility Circuit Breaker",
+                    "Fine-grained Per-Symbol ReentrantLock Mutex Isolation (Race-Free Execution)",
+                    "Order State Machine Transition Invariants",
+                    "Header-based Trader Identity Verification (X-Trader-Id)"
+                  ],
+                  "outOfScopeEnterprisePerimeter": [
+                    "OAuth2 / OpenID Connect Identity Provider Integration",
+                    "Enterprise JWT Token Expiry & Dynamic Key Rotation",
+                    "Role-Based Access Control (RBAC) Directory Management",
+                    "Perimeter TLS Termination & Web Application Firewall (WAF)"
+                  ]
+                }
+            """;
+            sendJsonResponse(exchange, 200, json);
+        }
+    }
+
     private void addCorsHeaders(HttpExchange exchange) {
         exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, X-Trader-Id, X-API-Key");
     }
 
     private void sendJsonResponse(HttpExchange exchange, int statusCode, String json) throws IOException {

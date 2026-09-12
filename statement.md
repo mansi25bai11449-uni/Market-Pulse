@@ -37,9 +37,10 @@ MarketPulse directly addresses and solves these fundamental problems by combinin
 - **Self-Trade Prevention (STP):** FINRA/SEC-aligned Cancel-Resting policy that intercepts taker-maker collisions from the same trader ID and cancels the resting order before any trade can execute.
 - **Buyer Price-Improvement Refunds:** Automatic immediate refund of $(P_{\text{limit}} - P_{\text{maker}}) \times Q_{\text{fill}}$ to the buyer's unreserved cash when matching against a more favorable resting sell price.
 - **Quantitative Market Microstructure Analytics:** Real-time computation of the Stoikov Micro-Price ($P_{\text{micro}}$) and Order-Book Imbalance (OBI).
-- **Dual-Layer Persistence Architecture:**
-  - *Phase 1 (Hot Path):* Raw JDBC transactions with explicit `setAutoCommit(false)`, `commit()`, and `rollback()` boundaries for sub-2ms settlement and 100% atomic recovery.
-  - *Phase 2 (Analytical):* JPA/Hibernate repository running typed JPQL queries (VWAP, most active symbol, wealth leaderboards) without blocking active trading.
+- **Dual-Mode Persistence Architecture:**
+  - *Mode A (High-Throughput In-Memory Hot Path - Default):* Pure in-memory matching (LMAX Disruptor Pattern) with asynchronous audit logging (>50,000 orders/sec).
+  - *Mode B (Synchronous JDBC ACID Settlement):* Synchronously embeds `TradeDAO.recordTradeAtomic` into `MatchingEngine.settleTrade()`, with explicit `setAutoCommit(false)`, `commit()`, and `rollback()` boundaries ensuring zero partial state mutation upon database fault.
+  - *Academic Relational Persistence:* Embedded H2 database (`jdbc:h2:mem:...` / `jdbc:h2:file:...` academic/prototype ACID persistence) paired with JPA/Hibernate JPQL analytical queries (VWAP, leaderboards).
 - **Embedded Web & Terminal Interface:** Built-in JDK HTTP server using Java 24 Virtual Threads, serving a high-frequency trading terminal featuring an interactive Level-2 depth ladder, Japanese candlestick OHLC charts with SMA-7, hotkey matrix, and an Academic Rubric & System Defense Inspector modal.
 - **Audit & Replay:** Append-only CSV trade logging and deterministic historical trade replay scrubber.
 
@@ -47,6 +48,8 @@ MarketPulse directly addresses and solves these fundamental problems by combinin
 - Multi-broker network routing protocols (e.g., external FIX 4.4/5.0 socket connectors to external clearinghouses).
 - Multi-currency forex conversions (system operates in USD base currency).
 - Derivative contracts (options, futures, and synthetic swaps are reserved for future work).
+- Enterprise identity and perimeter infrastructure (OAuth2, JWT authentication, SSO, and perimeter TLS termination) — system deliberately focuses on trading domain risk controls (pre-trade margin, STP, price collars, mutex isolation) and HTTP trader identification (`X-Trader-Id`).
+- Industrial distributed persistence (distributed Raft/Aeron WAL sequencer clusters) — system employs an embedded H2 academic/prototype ACID database.
 
 ---
 
