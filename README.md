@@ -472,5 +472,5 @@ mvn test
 * **Student:** Mansi Kumari
 * **Registration Number:** `25BAI11449`
 * **Program:** B.Tech Computer Science & Engineering (Specialization in Artificial Intelligence & Machine Learning)
-* **Institution:** School of Computing Science & Engineering, VIT Bhopal University
-* **Course:** `CSE2006 — Programming in Java` (LP · 3 Credits)
+* **Institution:**  VIT Bhopal University
+* **Course:** `CSE2006 — Programming in Java` 
