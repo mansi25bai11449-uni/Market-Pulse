@@ -60,28 +60,28 @@ Modern electronic exchanges process millions of concurrent order events per seco
 
 ### 3.1 5-Layer Architectural Blueprint
 ```mermaid
-graph TD
-    L1["Layer 1: Presentation (Web Terminal HTML5/Canvas/CSS + ConsoleApp)"] --> L2["Layer 2: REST Server (JDK HttpServer + Java 24 Virtual Threads)"]
-    L2 --> L3["Layer 3: Core Matching Engine (MatchingEngine Singleton + OrderBook)"]
-    L3 --> L4["Layer 4: Domain Model (Order, BuyOrder, SellOrder, Trader, Trade)"]
-    L3 --> L5["Layer 5: Dual Persistence (JDBC ACID DAOs + JPA Hibernate + H2 DB)"]
+flowchart TD
+    L1["Layer 1: Presentation Layer<br/>Web Terminal & ConsoleApp"] --> L2["Layer 2: REST Server Layer<br/>JDK HttpServer & Virtual Threads"]
+    L2 --> L3["Layer 3: Engine & Matching Core<br/>MatchingEngine Singleton & OrderBook"]
+    L3 --> L4["Layer 4: Domain Model Layer<br/>Order, BuyOrder, SellOrder, Trader, Trade"]
+    L3 --> L5["Layer 5: Dual Persistence Layer<br/>JDBC ACID DAOs, JPA Hibernate & H2 DB"]
 ```
 
 ### 3.2 Order Lifecycle & Settlement Flow
 ```mermaid
 sequenceDiagram
     autonumber
-    Trader->>API: POST /api/orders (BUY 100 AAPL @ $155)
+    Trader->>API: POST /api/orders (BUY 100 AAPL at $155)
     API->>Engine: submitOrder(order)
     Engine->>Trader: Reserve Margin ($15,500 Cash)
-    Engine->>Book: submit(order) -> acquire lock(AAPL)
-    Book->>Book: STP Check -> FIFO Sweep vs Asks ($150.00)
+    Engine->>Book: submit(order) and acquire lock(AAPL)
+    Book->>Book: STP Check and FIFO Sweep vs Asks ($150.00)
     Book->>Book: release lock(AAPL)
     alt Synchronous JDBC ACID Mode
         Engine->>JDBC: recordTradeAtomic(trade, buy, sell)
         JDBC-->>Engine: commit() or rollback() on failure
     else In-Memory Hot Path (Default)
-        Engine->>Trader: Instant Settlement (>50k ord/s) + Async CSV Log
+        Engine->>Trader: Instant Settlement (50k+ ord/s) & Async CSV Log
     end
     API-->>Trader: 200 OK (Status: FILLED, ExecPrice: $150.00)
 ```
@@ -90,7 +90,7 @@ sequenceDiagram
 ```mermaid
 erDiagram
     TRADERS ||--o{ ORDERS : places
-    ORDERS ||--o{ TRADES : "as buy/sell"
+    ORDERS ||--o{ TRADES : executes
     TRADERS {
         string trader_id PK
         string name
