@@ -15,7 +15,7 @@ echo [1/4] Checking Java installation...
 set "FOUND_JAVA="
 where java >nul 2>&1
 if %ERRORLEVEL% EQU 0 (
-    set "FOUND_JAVA=PATH"
+    set "FOUND_JAVA=java.exe"
     echo   [OK] Java executable found in system PATH.
 ) else (
     if defined JAVA_HOME (
@@ -43,13 +43,22 @@ echo.
 :: 2. Check JAVA_HOME
 echo [2/4] Checking JAVA_HOME environment variable...
 if defined JAVA_HOME (
+    if not exist "%JAVA_HOME%\bin\java.exe" (
+        echo   [WARN] JAVA_HOME points to an invalid JDK: "%JAVA_HOME%"
+        set "JAVA_HOME="
+    )
+)
+if not defined JAVA_HOME (
+    for /d %%D in ("C:\Program Files\Java\jdk-*") do set "JAVA_HOME=%%~fD"
+)
+if defined JAVA_HOME (
     if exist "%JAVA_HOME%\bin\java.exe" (
         echo   [OK] JAVA_HOME is configured: %JAVA_HOME%
     ) else (
-        echo   [!] JAVA_HOME is set to "%JAVA_HOME%", but bin\java.exe was not found.
+        echo   [WARN] JAVA_HOME is set to "%JAVA_HOME%", but bin\java.exe was not found.
     )
 ) else (
-    echo   [i] JAVA_HOME is not set. The launcher will attempt to use 'java' from PATH.
+    echo   [INFO] JAVA_HOME is not set. The launcher will attempt to use 'java' from PATH.
 )
 
 echo.
@@ -61,7 +70,7 @@ if exist "%~dp0mvnw.cmd" (
     if !ERRORLEVEL! EQU 0 (
         echo   [OK] Bundled Maven is functioning properly.
     ) else (
-        echo   [!] Maven wrapper encountered an issue. Ensure JDK 21/24 is installed.
+        echo   [WARN] Maven wrapper could not start. Check that the bundled Maven files are complete.
         set "ALL_OK=0"
     )
 ) else (
@@ -86,8 +95,8 @@ if "!ALL_OK!"=="1" (
     echo [SUCCESS] Your environment is ready!
     echo           Run "run.bat" to start MarketPulse Exchange and Web Terminal.
 ) else (
-    echo [ACTION REQUIRED] Please install JDK 24 or JDK 21 and add it to your PATH.
-    echo                   Download: https://adoptium.net/ or https://jdk.java.net/24/
+    echo [ACTION REQUIRED] Resolve the failed prerequisite reported above.
+    echo                   Java 24 is detected; the bundled Maven distribution is incomplete.
 )
 echo ===============================================================================
 echo.
