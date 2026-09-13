@@ -91,9 +91,28 @@ sequenceDiagram
 erDiagram
     TRADERS ||--o{ ORDERS : places
     ORDERS ||--o{ TRADES : "as buy/sell"
-    TRADERS { string trader_id PK, string name, double cash_balance }
-    ORDERS { string order_id PK, string trader_id FK, string symbol, string side, double price, int quantity, string status }
-    TRADES { string trade_id PK, string buy_order_id FK, string sell_order_id FK, double price, int quantity, timestamp executed_at }
+    TRADERS {
+        string trader_id PK
+        string name
+        double cash_balance
+    }
+    ORDERS {
+        string order_id PK
+        string trader_id FK
+        string symbol
+        string side
+        double price
+        int quantity
+        string status
+    }
+    TRADES {
+        string trade_id PK
+        string buy_order_id FK
+        string sell_order_id FK
+        double price
+        int quantity
+        timestamp executed_at
+    }
 ```
 
 ---
